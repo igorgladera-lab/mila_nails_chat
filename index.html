@@ -59,6 +59,12 @@
     --chat-bubble-enviada:#dcf8c6;
     --chat-bubble-recebida:#ffffff;
     --chat-bubble-erro:#ffcdd2;
+    --push-ok:#e8f5e9;
+    --push-ok-borda:#a5d6a7;
+    --push-ok-texto:#2e7d32;
+    --push-erro:#fce4ec;
+    --push-erro-borda:#f48fb1;
+    --push-erro-texto:#ad1457;
   }
 
   html[data-theme="dark"]{
@@ -85,6 +91,12 @@
     --chat-bubble-enviada:#1e4a20;
     --chat-bubble-recebida:#2e2e2e;
     --chat-bubble-erro:#4a1e1e;
+    --push-ok:#1e3a20;
+    --push-ok-borda:#2e5a30;
+    --push-ok-texto:#81c784;
+    --push-erro:#3a1e2a;
+    --push-erro-borda:#6a2a4a;
+    --push-erro-texto:#f48fb1;
   }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -106,9 +118,6 @@
     touch-action:manipulation;
   }
 
-  /* =========================================================
-     TELA PRINCIPAL (LISTA DE CONVERSAS)
-     ========================================================= */
   header.app-header{
     position:fixed;
     top:0;
@@ -176,7 +185,6 @@
     overscroll-behavior:contain;
   }
 
-  /* Botão flutuante de recarregar */
   .btn-float{
     position:fixed;
     bottom:calc(16px + env(safe-area-inset-bottom));
@@ -208,7 +216,6 @@
     to{ transform:rotate(360deg); }
   }
 
-  /* Lista de conversas */
   .lista{
     padding:0;
   }
@@ -285,7 +292,6 @@
     font-weight:600;
   }
 
-  /* Estados: vazio, carregando, erro */
   .vazio, .carregando, .erro{
     text-align:center;
     padding:80px 24px;
@@ -337,9 +343,6 @@
     animation:girar .8s linear infinite;
   }
 
-  /* =========================================================
-     TELA DE CONVERSA INDIVIDUAL
-     ========================================================= */
   .chat-container{
     position:fixed;
     left:0;
@@ -441,7 +444,6 @@
     line-height:1;
   }
 
-  /* Barra de input fixa no fundo */
   .chat-input-bar{
     position:fixed;
     left:0;
@@ -507,9 +509,6 @@
     display:block;
   }
 
-  /* =========================================================
-     OVERLAY (configurações)
-     ========================================================= */
   .overlay{
     position:fixed;
     inset:0;
@@ -615,6 +614,71 @@
     border-radius:8px;
   }
 
+  .push-bloco{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:16px;
+    background:var(--input-bg-alt);
+  }
+
+  .push-bloco .push-titulo{
+    font-size:13px;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:8px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+
+  .push-bloco .push-status{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-bottom:12px;
+    padding:8px 10px;
+    background:var(--surface);
+    border-radius:6px;
+    border:1px solid var(--border);
+  }
+
+  .push-bloco .push-status.ok{
+    color:var(--push-ok-texto);
+    border-color:var(--push-ok-borda);
+    background:var(--push-ok);
+    font-weight:600;
+  }
+
+  .push-bloco .push-status.erro{
+    color:var(--push-erro-texto);
+    border-color:var(--push-erro-borda);
+    background:var(--push-erro);
+    font-weight:600;
+  }
+
+  .push-bloco .push-btn{
+    width:100%;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:12px;
+    font-size:14px;
+    font-weight:600;
+    cursor:pointer;
+    transition:background .15s, opacity .15s;
+  }
+
+  .push-bloco .push-btn:active{
+    background:var(--primary-dark);
+  }
+
+  .push-bloco .push-btn:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
   .btn{
     border:none;
     border-radius:8px;
@@ -649,9 +713,6 @@
 </head>
 <body>
 
-<!-- =========================================================
-     TELA PRINCIPAL (LISTA)
-     ========================================================= -->
 <div id="telaLista">
   <header class="app-header">
     <span class="header-title">💬 Mila Whats</span>
@@ -663,9 +724,6 @@
   <button class="btn-float" id="btnReload" aria-label="Recarregar" style="display:none;">🔄</button>
 </div>
 
-<!-- =========================================================
-     TELA DE CONVERSA (INICIALMENTE ESCONDIDA)
-     ========================================================= -->
 <div id="telaConversa" style="display:none;">
   <header class="app-header">
     <button class="header-btn header-voltar" id="btnVoltar" aria-label="Voltar">←</button>
@@ -687,7 +745,6 @@
   </div>
 </div>
 
-<!-- OVERLAY: CONFIGURAÇÕES -->
 <div class="overlay" id="overlayConfig">
   <div class="sheet">
     <div class="sheet-header">
@@ -695,10 +752,12 @@
       <button class="sheet-close" data-close="overlayConfig">✕</button>
     </div>
     <div class="sheet-body">
+
       <div class="form-aviso">
         💡 Preencha com os dados do backend Mila Nails. Essas informações
         ficam salvas apenas neste aparelho.
       </div>
+
       <div class="form-group">
         <label for="cfgBackendUrl">URL do backend</label>
         <input type="url" id="cfgBackendUrl" placeholder="https://mila-nails-backend.onrender.com" autocomplete="off">
@@ -707,6 +766,13 @@
         <label for="cfgApiKey">API Key</label>
         <input type="password" id="cfgApiKey" placeholder="mila_nails_sk_..." autocomplete="off">
       </div>
+
+      <div class="push-bloco">
+        <div class="push-titulo">🔔 Notificações push</div>
+        <div class="push-status" id="pushStatus">Verificando...</div>
+        <button class="push-btn" id="btnAtivarPush" disabled>Ativar notificações</button>
+      </div>
+
     </div>
     <div class="sheet-footer">
       <button class="btn btn-secondary" data-close="overlayConfig">Cancelar</button>
@@ -722,6 +788,9 @@
   const LS_CONFIG = "mila_whats_config";
   const LS_TEMA   = "mila_whats_tema";
   const INTERVALO_REFRESH = 15000;
+
+  // VAPID Public Key — usada para gerar as subscriptions
+  const VAPID_PUBLIC_KEY = "BPaeCnBrwLNEAYDwSWy9UI_ZsoBCLsbiJjNtagxCa3PC9gNa8rTuUpngtyBJsaM4FktUkfhHp3rmgmwcTjjL8AE";
 
   /* =========================================================
      ESTADO
@@ -743,7 +812,13 @@
     janelaAberta: false,
     janelaFechaEm: null,
 
-    timerRefresh: null
+    timerRefresh: null,
+
+    // Push
+    swRegistration: null,
+    pushSubscription: null,
+    pushSuportado: false,
+    pushAtivo: false
   };
 
   /* =========================================================
@@ -833,15 +908,10 @@
   }
 
   /* =========================================================
-     BADGE (contador no ícone do app)
+     BADGE
      ========================================================= */
   async function atualizarBadge(){
-    // Verifica se o navegador suporta a API
-    if(!("setAppBadge" in navigator)){
-      return;
-    }
-
-    // Sem config → limpa o badge
+    if(!("setAppBadge" in navigator)) return;
     if(!temConfig()){
       try{ await navigator.clearAppBadge(); }catch(e){}
       return;
@@ -854,13 +924,11 @@
         headers: { "x-api-key": state.apiKey }
       });
       const data = await resp.json().catch(() => ({}));
-
       if(!resp.ok){
         try{ await navigator.clearAppBadge(); }catch(e){}
         return;
       }
 
-      // Soma o total de mensagens não lidas
       const conversas = Array.isArray(data.conversas) ? data.conversas : [];
       let total = 0;
       conversas.forEach(c => {
@@ -869,15 +937,224 @@
         }
       });
 
-      if(total > 0){
-        await navigator.setAppBadge(total);
-      } else {
-        await navigator.clearAppBadge();
-      }
-    }catch(e){
-      // Falha silenciosa
+      if(total > 0) await navigator.setAppBadge(total);
+      else          await navigator.clearAppBadge();
+    }catch(e){}
+  }
+
+  /* =========================================================
+     PUSH NOTIFICATIONS
+     ========================================================= */
+
+  // Converte base64url em Uint8Array (exigido pela API do navegador)
+  function urlBase64ToUint8Array(base64String){
+    const padding = "=".repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for(let i = 0; i < rawData.length; i++){
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  // Detecta suporte
+  function detectarSuportePush(){
+    const temSW = "serviceWorker" in navigator;
+    const temPush = "PushManager" in window;
+    const temNotification = "Notification" in window;
+    state.pushSuportado = temSW && temPush && temNotification;
+    return state.pushSuportado;
+  }
+
+  // Registra o Service Worker
+  async function registrarServiceWorker(){
+    if(!("serviceWorker" in navigator)) return null;
+    try{
+      const reg = await navigator.serviceWorker.register("sw.js", { scope: "./" });
+      state.swRegistration = reg;
+      return reg;
+    }catch(err){
+      console.error("[push] erro ao registrar SW:", err);
+      return null;
     }
   }
+
+  // Atualiza o status visual do bloco de notificações
+  function atualizarPushUI(){
+    const statusEl = document.getElementById("pushStatus");
+    const btnEl = document.getElementById("btnAtivarPush");
+    if(!statusEl || !btnEl) return;
+
+    statusEl.classList.remove("ok", "erro");
+
+    if(!detectarSuportePush()){
+      statusEl.textContent = "⚠️ Este navegador não suporta notificações push.";
+      statusEl.classList.add("erro");
+      btnEl.disabled = true;
+      btnEl.textContent = "Indisponível";
+      return;
+    }
+
+    if(!temConfig()){
+      statusEl.textContent = "Preencha a URL e a API Key primeiro, depois ative as notificações.";
+      btnEl.disabled = true;
+      btnEl.textContent = "Ativar notificações";
+      return;
+    }
+
+    const permissao = Notification.permission;
+
+    if(state.pushAtivo){
+      statusEl.textContent = "✅ Notificações ativas neste aparelho.";
+      statusEl.classList.add("ok");
+      btnEl.disabled = false;
+      btnEl.textContent = "Desativar notificações";
+      return;
+    }
+
+    if(permissao === "denied"){
+      statusEl.textContent = "❌ Permissão negada. Reative nas configurações do navegador.";
+      statusEl.classList.add("erro");
+      btnEl.disabled = true;
+      btnEl.textContent = "Bloqueado";
+      return;
+    }
+
+    if(permissao === "granted"){
+      statusEl.textContent = "Permissão concedida. Toque em Ativar para concluir a inscrição.";
+    } else {
+      statusEl.textContent = "Toque em Ativar para permitir notificações neste aparelho.";
+    }
+    btnEl.disabled = false;
+    btnEl.textContent = "Ativar notificações";
+  }
+
+  // Verifica se já existe subscription salva no navegador
+  async function verificarSubscriptionExistente(){
+    if(!state.swRegistration) return;
+    try{
+      const sub = await state.swRegistration.pushManager.getSubscription();
+      if(sub){
+        state.pushSubscription = sub;
+        state.pushAtivo = true;
+      } else {
+        state.pushAtivo = false;
+      }
+    }catch(e){
+      state.pushAtivo = false;
+    }
+  }
+
+  // Ativa notificações (pede permissão + cria subscription + envia ao backend)
+  async function ativarPush(){
+    if(!temConfig()){
+      alert("Preencha a URL e a API Key primeiro.");
+      return;
+    }
+
+    const btn = document.getElementById("btnAtivarPush");
+    btn.disabled = true;
+    btn.textContent = "Ativando...";
+
+    try{
+      // 1. Pedir permissão
+      const permissao = await Notification.requestPermission();
+      if(permissao !== "granted"){
+        alert("Permissão negada. Você pode reativar nas configurações do navegador.");
+        atualizarPushUI();
+        return;
+      }
+
+      // 2. Garantir Service Worker registrado
+      if(!state.swRegistration){
+        state.swRegistration = await registrarServiceWorker();
+      }
+      if(!state.swRegistration){
+        alert("Erro ao registrar o Service Worker. Recarregue o app e tente de novo.");
+        atualizarPushUI();
+        return;
+      }
+
+      // 3. Aguardar o SW estar pronto
+      await navigator.serviceWorker.ready;
+
+      // 4. Criar subscription
+      const sub = await state.swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+
+      state.pushSubscription = sub;
+      state.pushAtivo = true;
+
+      // 5. Enviar subscription para o backend
+      const resp = await fetch(state.backendUrl.replace(/\/+$/, "") + "/subscribe", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": state.apiKey
+        },
+        body: JSON.stringify({ subscription: sub })
+      });
+
+      if(!resp.ok){
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.error || ("HTTP " + resp.status));
+      }
+
+      alert("Notificações ativadas com sucesso!");
+      atualizarPushUI();
+
+    }catch(err){
+      console.error("[push] erro:", err);
+      alert("Erro ao ativar notificações: " + err.message);
+      state.pushAtivo = false;
+      atualizarPushUI();
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  // Desativa notificações (remove subscription)
+  async function desativarPush(){
+    const btn = document.getElementById("btnAtivarPush");
+    btn.disabled = true;
+    btn.textContent = "Desativando...";
+
+    try{
+      if(state.pushSubscription){
+        // Avisa o backend para remover
+        try{
+          await fetch(state.backendUrl.replace(/\/+$/, "") + "/unsubscribe", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": state.apiKey
+            },
+            body: JSON.stringify({
+              endpoint: state.pushSubscription.endpoint
+            })
+          });
+        }catch(e){}
+
+        await state.pushSubscription.unsubscribe();
+        state.pushSubscription = null;
+      }
+      state.pushAtivo = false;
+      alert("Notificações desativadas.");
+      atualizarPushUI();
+    }catch(err){
+      alert("Erro ao desativar: " + err.message);
+    }finally{
+      btn.disabled = false;
+    }
+  }
+
+  document.getElementById("btnAtivarPush").addEventListener("click", () => {
+    if(state.pushAtivo) desativarPush();
+    else ativarPush();
+  });
 
   /* =========================================================
      OVERLAYS
@@ -893,7 +1170,7 @@
   });
 
   /* =========================================================
-     NAVEGAÇÃO ENTRE TELAS
+     NAVEGAÇÃO
      ========================================================= */
   function mostrarLista(){
     document.getElementById("telaConversa").style.display = "none";
@@ -1275,6 +1552,7 @@
   document.getElementById("btnConfig").addEventListener("click", () => {
     document.getElementById("cfgBackendUrl").value = state.backendUrl || "";
     document.getElementById("cfgApiKey").value = state.apiKey || "";
+    atualizarPushUI();
     openOverlay("overlayConfig");
   });
 
@@ -1356,9 +1634,19 @@
   /* =========================================================
      BOOT
      ========================================================= */
-  function boot(){
+  async function boot(){
     loadConfig();
     renderLista();
+
+    // Registra o Service Worker (silencioso)
+    if("serviceWorker" in navigator){
+      try{
+        state.swRegistration = await registrarServiceWorker();
+        await verificarSubscriptionExistente();
+      }catch(e){}
+    }
+
+    atualizarPushUI();
 
     if(temConfig()){
       carregarConversas();
