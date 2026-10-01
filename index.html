@@ -488,7 +488,6 @@
     background:var(--primary);
     color:#fff;
     border:none;
-    font-size:18px;
     cursor:pointer;
     flex:0 0 auto;
     display:flex;
@@ -503,6 +502,9 @@
   .chat-input-bar .btn-enviar:disabled{
     opacity:.4;
     cursor:not-allowed;
+  }
+  .chat-input-bar .btn-enviar svg{
+    display:block;
   }
 
   /* =========================================================
@@ -677,7 +679,11 @@
 
   <div class="chat-input-bar" id="chatInputBar">
     <textarea id="inputMensagem" placeholder="Digite uma mensagem..." rows="1"></textarea>
-    <button class="btn-enviar" id="btnEnviar" aria-label="Enviar">📤</button>
+    <button class="btn-enviar" id="btnEnviar" aria-label="Enviar">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+        <path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.4.92v5.6c0 .5.37.92.86.99L14 12 2.86 12.89a1 1 0 0 0-.86.99v5.6a1 1 0 0 0 1.4.92z"/>
+      </svg>
+    </button>
   </div>
 </div>
 
@@ -715,22 +721,19 @@
 
   const LS_CONFIG = "mila_whats_config";
   const LS_TEMA   = "mila_whats_tema";
-  const INTERVALO_REFRESH = 15000; // 15 segundos
+  const INTERVALO_REFRESH = 15000;
 
   /* =========================================================
      ESTADO
      ========================================================= */
   let state = {
-    // Configuração
     backendUrl: "",
     apiKey: "",
 
-    // Lista de conversas
     conversas: [],
     carregando: false,
     erro: null,
 
-    // Conversa individual
     telefoneAtual: null,
     clienteAtual: "",
     mensagens: [],
@@ -740,7 +743,6 @@
     janelaAberta: false,
     janelaFechaEm: null,
 
-    // Timer de auto-refresh
     timerRefresh: null
   };
 
@@ -815,7 +817,6 @@
   }
 
   function calcularJanela24h(mensagens){
-    // Encontra a última mensagem recebida
     for(let i = mensagens.length - 1; i >= 0; i--){
       if(mensagens[i].direcao === "recebida"){
         const quando = new Date(mensagens[i].enviado_em).getTime();
@@ -845,7 +846,7 @@
   });
 
   /* =========================================================
-     NAVEGAÇÃO ENTRE TELAS
+     NAVEGAÇÃO
      ========================================================= */
   function mostrarLista(){
     document.getElementById("telaConversa").style.display = "none";
@@ -854,13 +855,11 @@
     state.clienteAtual = "";
     state.mensagens = [];
 
-    // Para o timer de refresh
     if(state.timerRefresh){
       clearInterval(state.timerRefresh);
       state.timerRefresh = null;
     }
 
-    // Recarrega a lista ao voltar
     carregarConversas();
   }
 
@@ -871,13 +870,11 @@
     state.clienteAtual = nome || "Cliente";
     document.getElementById("nomeConversa").textContent = state.clienteAtual;
 
-    // Limpa estado anterior
     state.mensagens = [];
     state.erroConversa = null;
 
     carregarConversa();
 
-    // Auto-refresh a cada 15s
     if(state.timerRefresh) clearInterval(state.timerRefresh);
     state.timerRefresh = setInterval(() => {
       if(state.telefoneAtual) carregarConversa({ silencioso: true });
@@ -1027,7 +1024,6 @@
 
     inputBar.style.display = "flex";
 
-    // Bloqueia o input se a janela estiver fechada
     if(!state.janelaAberta){
       inputMensagem.disabled = true;
       btnEnviar.disabled = true;
@@ -1038,7 +1034,6 @@
       inputMensagem.placeholder = "Digite uma mensagem...";
     }
 
-    // Renderiza aviso de janela 24h
     let html = "";
     if(!state.janelaAberta && state.mensagens.length > 0){
       html += `
@@ -1049,7 +1044,6 @@
       `;
     }
 
-    // Renderiza mensagens
     if(state.mensagens.length === 0){
       html += `
         <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px 16px;">
@@ -1064,7 +1058,6 @@
 
     container.innerHTML = html;
 
-    // Rola para o final
     setTimeout(() => {
       container.scrollTop = container.scrollHeight;
     }, 50);
@@ -1097,7 +1090,7 @@
   }
 
   /* =========================================================
-     API: LISTA DE CONVERSAS
+     API: LISTA
      ========================================================= */
   async function carregarConversas(){
     if(!temConfig()) return;
@@ -1128,7 +1121,7 @@
   }
 
   /* =========================================================
-     API: CONVERSA INDIVIDUAL
+     API: CONVERSA
      ========================================================= */
   async function carregarConversa(opts){
     opts = opts || {};
@@ -1155,11 +1148,9 @@
 
       const novas = Array.isArray(data.mensagens) ? data.mensagens : [];
 
-      // Preserva mensagens "enviando" locais que ainda não voltaram do backend
       const locaisPendentes = state.mensagens.filter(m => m._enviando || m._erro);
       state.mensagens = novas.concat(locaisPendentes);
 
-      // Atualiza status da janela 24h
       const info = calcularJanela24h(state.mensagens);
       state.janelaAberta = info.aberta;
       state.janelaFechaEm = info.fechaEm;
@@ -1174,7 +1165,7 @@
   }
 
   /* =========================================================
-     API: ENVIAR MENSAGEM
+     API: ENVIAR
      ========================================================= */
   async function enviarMensagem(){
     const input = document.getElementById("inputMensagem");
@@ -1186,7 +1177,6 @@
       return;
     }
 
-    // Cria mensagem otimista
     const msgTemp = {
       id: "temp_" + Date.now(),
       direcao: "enviada",
@@ -1216,12 +1206,8 @@
       });
 
       const data = await resp.json().catch(() => ({}));
+      if(!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
 
-      if(!resp.ok){
-        throw new Error(data.error || ("HTTP " + resp.status));
-      }
-
-      // Envio OK — recarrega a conversa para trazer a mensagem oficial do backend
       msgTemp._enviando = false;
       await carregarConversa({ silencioso: true });
     }catch(err){
@@ -1303,11 +1289,8 @@
   const btnEnviar = document.getElementById("btnEnviar");
 
   inputMensagem.addEventListener("input", () => {
-    // Auto-resize do textarea
     inputMensagem.style.height = "auto";
     inputMensagem.style.height = Math.min(inputMensagem.scrollHeight, 100) + "px";
-
-    // Habilita/desabilita botão
     btnEnviar.disabled = state.enviando || !inputMensagem.value.trim();
   });
 
