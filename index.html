@@ -833,6 +833,53 @@
   }
 
   /* =========================================================
+     BADGE (contador no ícone do app)
+     ========================================================= */
+  async function atualizarBadge(){
+    // Verifica se o navegador suporta a API
+    if(!("setAppBadge" in navigator)){
+      return;
+    }
+
+    // Sem config → limpa o badge
+    if(!temConfig()){
+      try{ await navigator.clearAppBadge(); }catch(e){}
+      return;
+    }
+
+    try{
+      const url = state.backendUrl.replace(/\/+$/, "") + "/conversas";
+      const resp = await fetch(url, {
+        method: "GET",
+        headers: { "x-api-key": state.apiKey }
+      });
+      const data = await resp.json().catch(() => ({}));
+
+      if(!resp.ok){
+        try{ await navigator.clearAppBadge(); }catch(e){}
+        return;
+      }
+
+      // Soma o total de mensagens não lidas
+      const conversas = Array.isArray(data.conversas) ? data.conversas : [];
+      let total = 0;
+      conversas.forEach(c => {
+        if(typeof c.mensagens_nao_lidas === "number" && c.mensagens_nao_lidas > 0){
+          total += c.mensagens_nao_lidas;
+        }
+      });
+
+      if(total > 0){
+        await navigator.setAppBadge(total);
+      } else {
+        await navigator.clearAppBadge();
+      }
+    }catch(e){
+      // Falha silenciosa
+    }
+  }
+
+  /* =========================================================
      OVERLAYS
      ========================================================= */
   function openOverlay(id){ document.getElementById(id).classList.add("show"); }
@@ -846,7 +893,7 @@
   });
 
   /* =========================================================
-     NAVEGAÇÃO
+     NAVEGAÇÃO ENTRE TELAS
      ========================================================= */
   function mostrarLista(){
     document.getElementById("telaConversa").style.display = "none";
@@ -1117,6 +1164,7 @@
     }finally{
       state.carregando = false;
       renderLista();
+      atualizarBadge();
     }
   }
 
@@ -1297,6 +1345,15 @@
   btnEnviar.addEventListener("click", enviarMensagem);
 
   /* =========================================================
+     BADGE — atualiza ao voltar para o app
+     ========================================================= */
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState === "visible" && temConfig()){
+      atualizarBadge();
+    }
+  });
+
+  /* =========================================================
      BOOT
      ========================================================= */
   function boot(){
@@ -1305,6 +1362,7 @@
 
     if(temConfig()){
       carregarConversas();
+      atualizarBadge();
     }
   }
 
