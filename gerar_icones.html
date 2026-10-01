@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Gerar ícones — Mila Whats</title>
+</head>
+<body style="font-family:Arial;padding:32px;text-align:center;background:#faf7f5;">
+  <h1 style="color:#7b1e3a;">Ícones Mila Whats</h1>
+  <p style="color:#555;">Balão de chat branco sobre fundo vinho</p>
+  <img id="prev" width="200" style="border-radius:22%;box-shadow:0 4px 12px rgba(0,0,0,.2);">
+  <br><br>
+  <button id="btn" style="padding:14px 28px;font-size:16px;background:#a02850;color:#fff;border:none;border-radius:8px;cursor:pointer;">
+    ⬇ Baixar os 2 arquivos
+  </button>
+
+<script>
+function draw(size){
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext("2d");
+
+  // Fundo com cantos arredondados (vinho)
+  const r = Math.round(size * 0.22);
+  ctx.fillStyle = "#7b1e3a";
+  ctx.beginPath();
+  ctx.moveTo(r, 0);
+  ctx.lineTo(size - r, 0);
+  ctx.quadraticCurveTo(size, 0, size, r);
+  ctx.lineTo(size, size - r);
+  ctx.quadraticCurveTo(size, size, size - r, size);
+  ctx.lineTo(r, size);
+  ctx.quadraticCurveTo(0, size, 0, size - r);
+  ctx.lineTo(0, r);
+  ctx.quadraticCurveTo(0, 0, r, 0);
+  ctx.fill();
+
+  // Balão de chat branco
+  const cx = size / 2;
+  const cy = size / 2 - size * 0.02; // leve ajuste para cima (compensar a "cauda")
+  const bw = size * 0.62; // largura do balão
+  const bh = size * 0.50; // altura do balão
+  const br = bh * 0.22;   // raio dos cantos
+
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+
+  // Retângulo principal com cantos arredondados
+  const x = cx - bw/2;
+  const y = cy - bh/2;
+
+  ctx.moveTo(x + br, y);
+  ctx.lineTo(x + bw - br, y);
+  ctx.quadraticCurveTo(x + bw, y, x + bw, y + br);
+  ctx.lineTo(x + bw, y + bh - br);
+  ctx.quadraticCurveTo(x + bw, y + bh, x + bw - br, y + bh);
+  ctx.lineTo(x + br, y + bh);
+  ctx.quadraticCurveTo(x, y + bh, x, y + bh - br);
+  ctx.lineTo(x, y + br);
+  ctx.quadraticCurveTo(x, y, x + br, y);
+  ctx.fill();
+
+  // "Cauda" do balão (triângulo apontando para baixo-esquerda)
+  ctx.beginPath();
+  ctx.moveTo(x + bw * 0.22, y + bh);
+  ctx.lineTo(x + bw * 0.15, y + bh + bh * 0.22);
+  ctx.lineTo(x + bw * 0.40, y + bh);
+  ctx.closePath();
+  ctx.fill();
+
+  return c;
+}
+
+function dl(c, nome){
+  c.toBlob(b => {
+    const u = URL.createObjectURL(b);
+    const a = document.createElement("a");
+    a.href = u;
+    a.download = nome;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(u), 1000);
+  }, "image/png");
+}
+
+const c192 = draw(192);
+const c512 = draw(512);
+
+document.getElementById("prev").src = c512.toDataURL();
+
+document.getElementById("btn").onclick = () => {
+  dl(c192, "icon-192.png");
+  setTimeout(() => dl(c512, "icon-512.png"), 300);
+};
+</script>
+</body>
+</html>
