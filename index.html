@@ -491,7 +491,6 @@
     line-height:1;
   }
 
-  /* ====== BOLHA DE IMAGEM ====== */
   .chat-bubble.bubble-img{
     padding:4px;
     overflow:hidden;
@@ -519,7 +518,6 @@
     padding-bottom:2px;
   }
 
-  /* ====== BOLHA DE ÁUDIO ====== */
   .chat-bubble.bubble-audio{
     padding:8px 12px;
     min-width:220px;
@@ -586,7 +584,6 @@
     font-variant-numeric:tabular-nums;
   }
 
-  /* ====== BARRA DE INPUT ====== */
   .chat-input-bar{
     position:fixed;
     left:0;
@@ -679,7 +676,6 @@
     display:block;
   }
 
-  /* ====== GRAVAÇÃO DE ÁUDIO ====== */
   .chat-input-bar.gravando{
     background:var(--gravando);
     border-top-color:var(--gravando);
@@ -747,7 +743,6 @@
     margin-left:8px;
   }
 
-  /* ====== OVERLAY DE IMAGEM CHEIA ====== */
   .img-full{
     position:fixed;
     inset:0;
@@ -785,7 +780,6 @@
     justify-content:center;
   }
 
-  /* ====== OVERLAYS ====== */
   .overlay{
     position:fixed;
     inset:0;
@@ -985,7 +979,6 @@
     background:var(--btn-active);
   }
 
-  /* ====== OVERLAY DE LEGENDA (imagem) ====== */
   .preview-img{
     width:100%;
     max-height:300px;
@@ -1056,13 +1049,11 @@
   </div>
 </div>
 
-<!-- Overlay de imagem cheia -->
 <div class="img-full" id="imgFull">
   <button class="fechar" id="btnFecharImgFull">✕</button>
   <img id="imgFullEl" src="" alt="">
 </div>
 
-<!-- Overlay de configurações -->
 <div class="overlay" id="overlayConfig">
   <div class="sheet">
     <div class="sheet-header">
@@ -1099,7 +1090,6 @@
   </div>
 </div>
 
-<!-- Overlay de pré-visualização + legenda (imagem) -->
 <div class="overlay" id="overlayImagem">
   <div class="sheet">
     <div class="sheet-header">
@@ -1128,8 +1118,8 @@
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
 
-  const LIMITE_IMG   = 5  * 1024 * 1024;  // 5 MB
-  const LIMITE_AUDIO = 16 * 1024 * 1024;  // 16 MB
+  const LIMITE_IMG   = 5  * 1024 * 1024;
+  const LIMITE_AUDIO = 16 * 1024 * 1024;
 
   const VAPID_PUBLIC_KEY = "BPaeCnBrwLNEAYDwSWy9UI_ZsoBCLsbiJjNtagxCa3PC9gNa8rTuUpngtyBJsaM4FktUkfhHp3rmgmwcTjjL8AE";
 
@@ -1161,10 +1151,8 @@
     pushSuportado: false,
     pushAtivo: false,
 
-    // Imagem pendente para envio
     imagemPendente: null,
 
-    // Gravação de áudio
     gravando: false,
     mediaRecorder: null,
     chunksAudio: [],
@@ -1172,7 +1160,6 @@
     timerGravacao: null,
     streamAudio: null,
 
-    // Player de áudio ativo
     audioPlayerAtivo: null
   };
 
@@ -1217,9 +1204,35 @@
       .replace(/'/g, "&#039;");
   }
 
+  function formatarTelefone(tel){
+    if(!tel) return "Sem nome";
+    const d = String(tel).replace(/\D/g, "");
+    const local = d.startsWith("55") ? d.slice(2) : d;
+    if(local.length === 11){
+      return "(" + local.slice(0,2) + ") " + local.slice(2,7) + "-" + local.slice(7);
+    }
+    if(local.length === 10){
+      return "(" + local.slice(0,2) + ") " + local.slice(2,6) + "-" + local.slice(6);
+    }
+    return tel;
+  }
+
+  function nomeExibicao(c){
+    if(c && c.cliente && String(c.cliente).trim()) return String(c.cliente).trim();
+    return formatarTelefone(c && c.telefone);
+  }
+
   function iniciais(nome){
     if(!nome) return "?";
-    const partes = nome.trim().split(/\s+/);
+    const limpo = String(nome).trim();
+    if(!limpo) return "?";
+    // Se parece telefone formatado, extrai dígitos
+    const soDigitos = limpo.replace(/\D/g, "");
+    if(soDigitos.length >= 10 && limpo.replace(/[\d\s\-()+]/g, "") === ""){
+      // É um telefone — usa os 2 últimos dígitos significativos
+      return soDigitos.slice(-2);
+    }
+    const partes = limpo.split(/\s+/);
     if(partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
     return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
   }
@@ -1318,7 +1331,7 @@
   /* =========================================================
      URL ASSINADA DE MÍDIA
      ========================================================= */
-  const cacheUrlAssinada = new Map(); // path -> { url, expiraEm }
+  const cacheUrlAssinada = new Map();
 
   async function obterUrlAssinada(path){
     if(!path) return null;
@@ -1611,8 +1624,9 @@
     document.getElementById("telaLista").style.display = "none";
     document.getElementById("telaConversa").style.display = "block";
     state.telefoneAtual = telefone;
-    state.clienteAtual = nome || "Cliente";
-    document.getElementById("nomeConversa").textContent = state.clienteAtual;
+    const nomeFinal = (nome && String(nome).trim()) ? String(nome).trim() : formatarTelefone(telefone);
+    state.clienteAtual = nomeFinal;
+    document.getElementById("nomeConversa").textContent = nomeFinal;
 
     state.mensagens = [];
     state.erroConversa = null;
@@ -1727,7 +1741,7 @@
   function renderListaConversas(conversas){
     let html = '<div class="lista">';
     conversas.forEach(c => {
-      const nome = c.cliente || "Cliente";
+      const nome = nomeExibicao(c);
       const ultima = previewUltima(c);
       const ehEnviada = c.ultima_direcao === "enviada";
       const horario = formatarHorario(c.ultima_data);
@@ -1835,7 +1849,6 @@
       container.scrollTop = container.scrollHeight;
     }, 50);
 
-    // Carrega URLs assinadas para mídias sem src ainda
     hidratarMidias();
   }
 
@@ -1857,7 +1870,7 @@
     /* ---------- IMAGEM ---------- */
     if(tipo === "image"){
       const temUrl = !!m.media_url;
-      const srcLocal = m._localSrc || ""; // usado para preview otimista
+      const srcLocal = m._localSrc || "";
       const src = srcLocal || (m._urlAssinada || "");
 
       const imgTag = temUrl || srcLocal
@@ -1894,7 +1907,6 @@
         ? `<audio preload="none" data-src="${escapeHtml(src)}" data-path="${escapeHtml(m.media_url || '')}"></audio>`
         : `<div style="font-size:12px;color:var(--muted);">Áudio indisponível</div>`;
 
-      // Barras decorativas da onda (geradas a partir do id)
       const barras = gerarBarrasOnda(m.id || "x");
 
       return `
@@ -1924,7 +1936,7 @@
       `;
     }
 
-    /* ---------- TEXTO (padrão) ---------- */
+    /* ---------- TEXTO ---------- */
     return `
       <div class="chat-msg ${classe}" data-msg-id="${escapeHtml(m.id || "")}">
         <div class="chat-bubble${erro}">
@@ -1939,7 +1951,6 @@
   }
 
   function gerarBarrasOnda(seed){
-    // Gera 24 barras com alturas pseudo-aleatórias determinísticas
     let h = 0;
     for(let i = 0; i < seed.length; i++){
       h = (h * 31 + seed.charCodeAt(i)) >>> 0;
@@ -1948,14 +1959,14 @@
     const N = 24;
     for(let i = 0; i < N; i++){
       h = (h * 1664525 + 1013904223) >>> 0;
-      const alt = 30 + (h % 70); // 30% a 100%
+      const alt = 30 + (h % 70);
       html += `<span class="barra" style="height:${alt}%"></span>`;
     }
     return html;
   }
 
   /* =========================================================
-     HIDRATAR MÍDIAS (URLs assinadas)
+     HIDRATAR MÍDIAS
      ========================================================= */
   async function hidratarMidias(){
     const imgs = document.querySelectorAll("img.chat-img[data-path]");
@@ -1979,7 +1990,7 @@
   }
 
   /* =========================================================
-     AUDIO PLAYER CUSTOMIZADO
+     AUDIO PLAYER
      ========================================================= */
   function pararAudioAtivo(exceto){
     if(state.audioPlayerAtivo && state.audioPlayerAtivo !== exceto){
@@ -1994,10 +2005,8 @@
   }
 
   document.getElementById("chatContainer").addEventListener("click", async (e) => {
-    /* Play/pause do áudio */
     const btnPlay = e.target.closest(".btn-play");
     if(btnPlay){
-      const idMsg = btnPlay.getAttribute("data-play");
       const wrap = btnPlay.closest(".audio-player");
       const audio = wrap.parentElement.querySelector("audio");
       const btn = btnPlay;
@@ -2011,7 +2020,6 @@
         return;
       }
 
-      // Pausa outro player
       pararAudioAtivo(wrap);
 
       if(audio.paused){
@@ -2055,14 +2063,12 @@
       return;
     }
 
-    /* Clique na imagem abre tela cheia */
     const img = e.target.closest("img.chat-img");
     if(img && img.src){
       abrirImgFull(img.src);
       return;
     }
 
-    /* Botão de recarregar conversa */
     const btnRecarregar = e.target.closest("#btnRecarregarConversaErro");
     if(btnRecarregar) carregarConversa();
   });
@@ -2223,7 +2229,7 @@
   }
 
   /* =========================================================
-     API: UPLOAD DE MÍDIA (helper comum)
+     API: UPLOAD DE MÍDIA
      ========================================================= */
   async function uploadMidia(fileOrBlob, filename, tipoEsperado){
     const form = new FormData();
@@ -2244,7 +2250,7 @@
   }
 
   /* =========================================================
-     IMAGEM — escolher, pré-visualizar, enviar
+     IMAGEM
      ========================================================= */
   document.getElementById("btnAnexar").addEventListener("click", () => {
     if(!state.janelaAberta){
@@ -2268,7 +2274,6 @@
       return;
     }
 
-    // Prepara preview
     const reader = new FileReader();
     reader.onload = () => {
       state.imagemPendente = { file, dataUrl: reader.result };
@@ -2287,7 +2292,6 @@
 
     closeOverlay("overlayImagem");
 
-    // Bolha otimista com preview local
     const tempId = "temp_img_" + Date.now();
     const msgTemp = {
       id: tempId,
@@ -2303,10 +2307,8 @@
     renderConversa();
 
     try{
-      // 1) Upload
       const up = await uploadMidia(img.file, img.file.name || "foto.jpg", "image");
 
-      // 2) Enviar
       const resp = await fetch(urlBase("/responder"), {
         method: "POST",
         headers: {
@@ -2341,7 +2343,7 @@
   });
 
   /* =========================================================
-     ÁUDIO — gravação via MediaRecorder
+     ÁUDIO
      ========================================================= */
   function escolherMimeAudio(){
     const candidatos = [
@@ -2391,13 +2393,10 @@
         if(e.data && e.data.size > 0) state.chunksAudio.push(e.data);
       };
 
-      recorder.onstop = () => {
-        // tratado depois
-      };
+      recorder.onstop = () => {};
 
       recorder.start();
 
-      // UI de gravação
       document.getElementById("chatInputBar").classList.add("gravando");
       atualizarTempoGravacao();
 
@@ -2454,7 +2453,6 @@
 
     const duracaoSeg = Math.max(1, Math.round((Date.now() - state.inicioGravacao) / 1000));
 
-    // Para o recorder e espera o último chunk
     const recorder = state.mediaRecorder;
     const chunks = state.chunksAudio;
 
@@ -2469,7 +2467,6 @@
       }catch(e){ resolve(); }
     });
 
-    // Finaliza estado
     state.gravando = false;
     if(state.timerGravacao){
       clearInterval(state.timerGravacao);
@@ -2490,7 +2487,6 @@
       return;
     }
 
-    // Bolha otimista (com duração)
     const tempId = "temp_aud_" + Date.now();
     const localUrl = URL.createObjectURL(blob);
 
@@ -2548,7 +2544,6 @@
     }
   }
 
-  // Botões de gravação
   document.getElementById("btnGravar").addEventListener("click", () => {
     iniciarGravacao();
   });
@@ -2605,7 +2600,8 @@
     const conversa = e.target.closest(".conversa");
     if(conversa){
       const tel = conversa.getAttribute("data-telefone");
-      const nome = conversa.getAttribute("data-cliente");
+      const convObj = state.conversas.find(x => x.telefone === tel);
+      const nome = convObj ? nomeExibicao(convObj) : (conversa.getAttribute("data-cliente") || "");
       mostrarConversa(tel, nome);
     }
   });
@@ -2630,7 +2626,6 @@
 
   btnEnviar.addEventListener("click", enviarMensagem);
 
-  // Enter sem shift envia
   inputMensagem.addEventListener("keydown", (e) => {
     if(e.key === "Enter" && !e.shiftKey){
       e.preventDefault();
@@ -2670,7 +2665,7 @@
   function checarDeepLink(){
     const params = new URLSearchParams(window.location.search);
     const tel = params.get("tel");
-    const cliente = params.get("cliente") || "Cliente";
+    const cliente = params.get("cliente") || "";
 
     if(tel && temConfig()){
       try{
@@ -2679,7 +2674,7 @@
       }catch(e){}
 
       setTimeout(() => {
-        mostrarConversa(tel, cliente);
+        mostrarConversa(tel, cliente || formatarTelefone(tel));
       }, 300);
       return true;
     }
