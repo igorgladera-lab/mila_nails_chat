@@ -1226,10 +1226,8 @@
     if(!nome) return "?";
     const limpo = String(nome).trim();
     if(!limpo) return "?";
-    // Se parece telefone formatado, extrai dígitos
     const soDigitos = limpo.replace(/\D/g, "");
     if(soDigitos.length >= 10 && limpo.replace(/[\d\s\-()+]/g, "") === ""){
-      // É um telefone — usa os 2 últimos dígitos significativos
       return soDigitos.slice(-2);
     }
     const partes = limpo.split(/\s+/);
@@ -2230,11 +2228,15 @@
 
   /* =========================================================
      API: UPLOAD DE MÍDIA
+     Aceita duracaoSeg opcional (só para áudio) — v1.8.2
      ========================================================= */
-  async function uploadMidia(fileOrBlob, filename, tipoEsperado){
+  async function uploadMidia(fileOrBlob, filename, tipoEsperado, duracaoSeg){
     const form = new FormData();
     form.append("file", fileOrBlob, filename);
     form.append("telefone", state.telefoneAtual || "");
+    if(duracaoSeg && duracaoSeg > 0){
+      form.append("duracao", String(Math.round(duracaoSeg)));
+    }
 
     const resp = await fetch(urlBase("/upload-media"), {
       method: "POST",
@@ -2451,6 +2453,7 @@
   async function finalizarGravacaoEEnviar(){
     if(!state.gravando) return;
 
+    // Duração real medida pelo frontend
     const duracaoSeg = Math.max(1, Math.round((Date.now() - state.inicioGravacao) / 1000));
 
     const recorder = state.mediaRecorder;
@@ -2509,7 +2512,8 @@
                 : (blob.type.indexOf("ogg") >= 0) ? "ogg"
                 : "webm";
 
-      const up = await uploadMidia(blob, "audio." + ext, "audio");
+      // v1.8.2: passa a duração real para o upload
+      const up = await uploadMidia(blob, "audio." + ext, "audio", duracaoSeg);
 
       const resp = await fetch(urlBase("/responder"), {
         method: "POST",
@@ -2523,7 +2527,8 @@
           mediaId: up.mediaId,
           mediaUrl: up.mediaUrl,
           mediaMime: up.mediaMime,
-          mediaDuration: up.mediaDuration || duracaoSeg
+          // v1.8.2: sempre usa a duração real medida pelo frontend
+          mediaDuration: duracaoSeg
         })
       });
 
