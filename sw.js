@@ -1,7 +1,7 @@
 // =========================================================
 // Service Worker do Mila Whats
 // Recebe notificações push e mostra o banner no celular
-// v1.7.2 — deep-link para a conversa ao tocar na notificação
+// v1.8 — suporte a notificações de mídia e deep-link
 // =========================================================
 
 self.addEventListener("install", (event) => {
@@ -17,7 +17,8 @@ self.addEventListener("push", (event) => {
     title: "Mila Whats",
     body: "Nova mensagem recebida",
     cliente: "",
-    telefone: ""
+    telefone: "",
+    tipo: "text"
   };
 
   try{
@@ -41,9 +42,17 @@ self.addEventListener("push", (event) => {
     data: {
       cliente: data.cliente || "",
       telefone: data.telefone || "",
+      tipo: data.tipo || "text",
       url: "./"
     }
   };
+
+  // Ajusta ícone visual para mídia (usando emoji no título)
+  if(data.tipo === "image"){
+    // mantém title como veio do backend
+  } else if(data.tipo === "audio" || data.tipo === "voice"){
+    // idem
+  }
 
   event.waitUntil(
     self.registration.showNotification(data.title || "Mila Whats", options)
@@ -56,7 +65,6 @@ self.addEventListener("notificationclick", (event) => {
   const tel = (event.notification.data && event.notification.data.telefone) || "";
   const cliente = (event.notification.data && event.notification.data.cliente) || "";
 
-  // URL com deep-link: ?tel=...&cliente=...
   const params = new URLSearchParams();
   if(tel) params.set("tel", tel);
   if(cliente) params.set("cliente", cliente);
@@ -66,7 +74,6 @@ self.addEventListener("notificationclick", (event) => {
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(clientsArr => {
-        // Se já tem uma aba do Mila Whats aberta, foca e manda mensagem
         for(const c of clientsArr){
           if(c.url.includes("mila_nails_chat")){
             c.postMessage({
@@ -78,10 +85,14 @@ self.addEventListener("notificationclick", (event) => {
             return;
           }
         }
-        // Senão, abre uma nova com o deep-link
         if(self.clients.openWindow){
           return self.clients.openWindow(urlAbrir);
         }
       })
   );
+});
+
+self.addEventListener("notificationclose", (event) => {
+  // apenas informativo — o badge continua até abrir o app
+  console.log("[sw] notificação fechada sem clique");
 });

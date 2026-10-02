@@ -67,6 +67,9 @@
     --push-erro-texto:#ad1457;
     --badge-bg:#25d366;
     --badge-text:#ffffff;
+    --audio-bg-enviada:#c8e6a0;
+    --audio-bg-recebida:#e8e2de;
+    --gravando:#c62828;
   }
 
   html[data-theme="dark"]{
@@ -101,6 +104,9 @@
     --push-erro-texto:#f48fb1;
     --badge-bg:#25d366;
     --badge-text:#ffffff;
+    --audio-bg-enviada:#1e4a20;
+    --audio-bg-recebida:#3a3a3a;
+    --gravando:#ef5350;
   }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -300,7 +306,10 @@
     font-weight:600;
   }
 
-  /* ====== BADGE DE NÃO LIDAS ====== */
+  .conversa .ultima .preview-emoji{
+    margin-right:3px;
+  }
+
   .conversa .badge{
     display:inline-flex;
     align-items:center;
@@ -482,6 +491,102 @@
     line-height:1;
   }
 
+  /* ====== BOLHA DE IMAGEM ====== */
+  .chat-bubble.bubble-img{
+    padding:4px;
+    overflow:hidden;
+  }
+
+  .chat-bubble.bubble-img .chat-img{
+    display:block;
+    max-width:100%;
+    max-height:340px;
+    border-radius:8px;
+    cursor:pointer;
+    background:var(--input-bg-alt);
+  }
+
+  .chat-bubble.bubble-img .legenda{
+    padding:6px 6px 2px;
+    font-size:14px;
+    line-height:1.35;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+
+  .chat-bubble.bubble-img .meta{
+    padding-right:6px;
+    padding-bottom:2px;
+  }
+
+  /* ====== BOLHA DE ÁUDIO ====== */
+  .chat-bubble.bubble-audio{
+    padding:8px 12px;
+    min-width:220px;
+  }
+
+  .audio-player{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .audio-player .btn-play{
+    width:34px;
+    height:34px;
+    border-radius:50%;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    transition:transform .1s;
+  }
+  .audio-player .btn-play:active{
+    transform:scale(.92);
+  }
+  .audio-player .btn-play svg{
+    display:block;
+  }
+
+  .audio-player .onda{
+    flex:1;
+    height:22px;
+    display:flex;
+    align-items:center;
+    gap:2px;
+    position:relative;
+    cursor:pointer;
+    user-select:none;
+  }
+
+  .audio-player .onda .barra{
+    flex:1;
+    background:rgba(0,0,0,.18);
+    border-radius:2px;
+    transition:background .1s;
+  }
+  html[data-theme="dark"] .audio-player .onda .barra{
+    background:rgba(255,255,255,.22);
+  }
+  .audio-player .onda .barra.ativa{
+    background:var(--primary);
+  }
+
+  .audio-player .tempo{
+    font-size:11px;
+    color:var(--muted);
+    flex:0 0 auto;
+    min-width:36px;
+    text-align:right;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* ====== BARRA DE INPUT ====== */
   .chat-input-bar{
     position:fixed;
     left:0;
@@ -492,8 +597,35 @@
     border-top:1px solid var(--border);
     display:flex;
     align-items:flex-end;
-    gap:8px;
+    gap:6px;
     z-index:15;
+  }
+
+  .chat-input-bar .btn-icone{
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    background:transparent;
+    color:var(--primary);
+    border:none;
+    cursor:pointer;
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    transition:transform .1s, background .15s;
+  }
+  .chat-input-bar .btn-icone:active{
+    transform:scale(.92);
+    background:var(--btn-active);
+  }
+  .chat-input-bar .btn-icone:disabled{
+    opacity:.4;
+    cursor:not-allowed;
+  }
+  .chat-input-bar .btn-icone svg{
+    display:block;
   }
 
   .chat-input-bar textarea{
@@ -547,6 +679,113 @@
     display:block;
   }
 
+  /* ====== GRAVAÇÃO DE ÁUDIO ====== */
+  .chat-input-bar.gravando{
+    background:var(--gravando);
+    border-top-color:var(--gravando);
+  }
+
+  .chat-input-bar.gravando .btn-icone,
+  .chat-input-bar.gravando .btn-enviar,
+  .chat-input-bar.gravando textarea{
+    display:none !important;
+  }
+
+  .chat-input-bar .gravando-ui{
+    display:none;
+    flex:1;
+    align-items:center;
+    gap:10px;
+    color:#fff;
+    font-size:14px;
+    font-weight:600;
+  }
+
+  .chat-input-bar.gravando .gravando-ui{
+    display:flex;
+  }
+
+  .chat-input-bar .gravando-ui .pisca{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#fff;
+    animation:piscar 1s infinite;
+    flex:0 0 auto;
+  }
+  @keyframes piscar{
+    0%,100%{ opacity:1; }
+    50%{ opacity:.2; }
+  }
+
+  .chat-input-bar .gravando-ui .tempo-grav{
+    font-variant-numeric:tabular-nums;
+    margin-left:auto;
+  }
+
+  .chat-input-bar .gravando-ui .btn-cancelar-grav{
+    background:rgba(255,255,255,.2);
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:8px 12px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    margin-left:12px;
+  }
+
+  .chat-input-bar .gravando-ui .btn-parar-grav{
+    background:#fff;
+    color:var(--gravando);
+    border:none;
+    border-radius:6px;
+    padding:8px 14px;
+    font-size:13px;
+    font-weight:700;
+    cursor:pointer;
+    margin-left:8px;
+  }
+
+  /* ====== OVERLAY DE IMAGEM CHEIA ====== */
+  .img-full{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.92);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:300;
+    padding:20px;
+    cursor:zoom-out;
+  }
+  .img-full.show{
+    display:flex;
+  }
+  .img-full img{
+    max-width:100%;
+    max-height:100%;
+    border-radius:8px;
+    box-shadow:0 8px 32px rgba(0,0,0,.6);
+  }
+  .img-full .fechar{
+    position:fixed;
+    top:calc(16px + env(safe-area-inset-top));
+    right:16px;
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    background:rgba(255,255,255,.15);
+    color:#fff;
+    border:none;
+    font-size:22px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  /* ====== OVERLAYS ====== */
   .overlay{
     position:fixed;
     inset:0;
@@ -746,6 +985,17 @@
     background:var(--btn-active);
   }
 
+  /* ====== OVERLAY DE LEGENDA (imagem) ====== */
+  .preview-img{
+    width:100%;
+    max-height:300px;
+    object-fit:contain;
+    background:var(--input-bg-alt);
+    border-radius:8px;
+    margin-bottom:12px;
+    display:block;
+  }
+
   ::-webkit-scrollbar{ width:0; height:0; }
 </style>
 </head>
@@ -774,15 +1024,45 @@
   <div class="chat-container" id="chatContainer"></div>
 
   <div class="chat-input-bar" id="chatInputBar">
+    <button class="btn-icone" id="btnAnexar" aria-label="Enviar imagem" disabled>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+      </svg>
+    </button>
+    <input type="file" id="inputFile" accept="image/jpeg,image/png,image/webp" style="display:none">
+
     <textarea id="inputMensagem" placeholder="Digite uma mensagem..." rows="1"></textarea>
-    <button class="btn-enviar" id="btnEnviar" aria-label="Enviar">
+
+    <button class="btn-icone" id="btnGravar" aria-label="Gravar áudio" disabled>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z"/>
+        <path d="M19 11a1 1 0 1 0-2 0 5 5 0 1 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/>
+      </svg>
+    </button>
+
+    <button class="btn-enviar" id="btnEnviar" aria-label="Enviar" disabled>
       <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
         <path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.4.92v5.6c0 .5.37.92.86.99L14 12 2.86 12.89a1 1 0 0 0-.86.99v5.6a1 1 0 0 0 1.4.92z"/>
       </svg>
     </button>
+
+    <div class="gravando-ui" id="gravandoUI">
+      <span class="pisca"></span>
+      <span>Gravando áudio...</span>
+      <span class="tempo-grav" id="tempoGrav">0:00</span>
+      <button class="btn-cancelar-grav" id="btnCancelarGrav" type="button">✕</button>
+      <button class="btn-parar-grav" id="btnPararGrav" type="button">Enviar</button>
+    </div>
   </div>
 </div>
 
+<!-- Overlay de imagem cheia -->
+<div class="img-full" id="imgFull">
+  <button class="fechar" id="btnFecharImgFull">✕</button>
+  <img id="imgFullEl" src="" alt="">
+</div>
+
+<!-- Overlay de configurações -->
 <div class="overlay" id="overlayConfig">
   <div class="sheet">
     <div class="sheet-header">
@@ -819,16 +1099,38 @@
   </div>
 </div>
 
+<!-- Overlay de pré-visualização + legenda (imagem) -->
+<div class="overlay" id="overlayImagem">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title">Enviar imagem</div>
+      <button class="sheet-close" data-close="overlayImagem">✕</button>
+    </div>
+    <div class="sheet-body">
+      <img id="previewImg" class="preview-img" src="" alt="">
+      <div class="form-group">
+        <label for="legendaImg">Legenda (opcional)</label>
+        <input type="text" id="legendaImg" placeholder="Escreva uma legenda..." maxlength="1024" autocomplete="off">
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-secondary" data-close="overlayImagem">Cancelar</button>
+      <button class="btn btn-primary" id="btnEnviarImagem">Enviar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
 
   const LS_CONFIG = "mila_whats_config";
-  const LS_TEMA   = "mila_whats_tema";
-  const INTERVALO_REFRESH_LISTA    = 30000;  // 30s
-  const INTERVALO_REFRESH_CONVERSA = 15000;  // 15s
+  const INTERVALO_REFRESH_LISTA    = 30000;
+  const INTERVALO_REFRESH_CONVERSA = 15000;
 
-  // VAPID Public Key — usada para gerar as subscriptions
+  const LIMITE_IMG   = 5  * 1024 * 1024;  // 5 MB
+  const LIMITE_AUDIO = 16 * 1024 * 1024;  // 16 MB
+
   const VAPID_PUBLIC_KEY = "BPaeCnBrwLNEAYDwSWy9UI_ZsoBCLsbiJjNtagxCa3PC9gNa8rTuUpngtyBJsaM4FktUkfhHp3rmgmwcTjjL8AE";
 
   /* =========================================================
@@ -854,11 +1156,24 @@
     timerRefreshLista: null,
     timerRefreshConversa: null,
 
-    // Push
     swRegistration: null,
     pushSubscription: null,
     pushSuportado: false,
-    pushAtivo: false
+    pushAtivo: false,
+
+    // Imagem pendente para envio
+    imagemPendente: null,
+
+    // Gravação de áudio
+    gravando: false,
+    mediaRecorder: null,
+    chunksAudio: [],
+    inicioGravacao: 0,
+    timerGravacao: null,
+    streamAudio: null,
+
+    // Player de áudio ativo
+    audioPlayerAtivo: null
   };
 
   /* =========================================================
@@ -883,6 +1198,10 @@
 
   function temConfig(){
     return !!(state.backendUrl && state.apiKey);
+  }
+
+  function urlBase(path){
+    return state.backendUrl.replace(/\/+$/, "") + path;
   }
 
   /* =========================================================
@@ -931,6 +1250,13 @@
            String(d.getMinutes()).padStart(2, "0");
   }
 
+  function formatarDuracao(seg){
+    if(!seg || seg < 0) seg = 0;
+    const m = Math.floor(seg / 60);
+    const s = Math.floor(seg % 60);
+    return m + ":" + String(s).padStart(2, "0");
+  }
+
   function calcularJanela24h(mensagens){
     for(let i = mensagens.length - 1; i >= 0; i--){
       if(mensagens[i].direcao === "recebida"){
@@ -953,8 +1279,17 @@
     return String(n);
   }
 
+  function previewUltima(c){
+    const tipo = c.ultima_tipo || "text";
+    const txt = c.ultima_mensagem || "";
+    if(tipo === "image") return "📷 Foto" + (txt && txt !== "[Imagem]" ? ": " + txt : "");
+    if(tipo === "audio") return "🎤 Áudio";
+    if(tipo === "voice") return "🎤 Mensagem de voz";
+    return txt;
+  }
+
   /* =========================================================
-     BADGE DO ÍCONE (PWA)
+     BADGE GLOBAL
      ========================================================= */
   async function atualizarBadge(){
     if(!("setAppBadge" in navigator)) return;
@@ -964,8 +1299,7 @@
     }
 
     try{
-      const url = state.backendUrl.replace(/\/+$/, "") + "/conversas/nao-lidas/total";
-      const resp = await fetch(url, {
+      const resp = await fetch(urlBase("/conversas/nao-lidas/total"), {
         method: "GET",
         headers: { "x-api-key": state.apiKey }
       });
@@ -979,6 +1313,38 @@
       if(total > 0) await navigator.setAppBadge(total);
       else          await navigator.clearAppBadge();
     }catch(e){}
+  }
+
+  /* =========================================================
+     URL ASSINADA DE MÍDIA
+     ========================================================= */
+  const cacheUrlAssinada = new Map(); // path -> { url, expiraEm }
+
+  async function obterUrlAssinada(path){
+    if(!path) return null;
+
+    const agora = Date.now();
+    const cache = cacheUrlAssinada.get(path);
+    if(cache && cache.expiraEm > agora + 30000){
+      return cache.url;
+    }
+
+    try{
+      const resp = await fetch(
+        urlBase("/media-url?path=" + encodeURIComponent(path)),
+        { headers: { "x-api-key": state.apiKey } }
+      );
+      const data = await resp.json().catch(() => ({}));
+      if(!resp.ok || !data.url) return null;
+
+      cacheUrlAssinada.set(path, {
+        url: data.url,
+        expiraEm: agora + (data.expiraEm || 3600) * 1000
+      });
+      return data.url;
+    }catch(e){
+      return null;
+    }
   }
 
   /* =========================================================
@@ -1116,7 +1482,7 @@
       state.pushSubscription = sub;
       state.pushAtivo = true;
 
-      const resp = await fetch(state.backendUrl.replace(/\/+$/, "") + "/subscribe", {
+      const resp = await fetch(urlBase("/subscribe"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1151,7 +1517,7 @@
     try{
       if(state.pushSubscription){
         try{
-          await fetch(state.backendUrl.replace(/\/+$/, "") + "/unsubscribe", {
+          await fetch(urlBase("/unsubscribe"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -1215,7 +1581,7 @@
     pararRefreshLista();
     state.timerRefreshLista = setInterval(() => {
       if(document.visibilityState !== "visible") return;
-      if(state.telefoneAtual) return; // só quando estamos na lista
+      if(state.telefoneAtual) return;
       carregarConversas({ silencioso: true });
     }, INTERVALO_REFRESH_LISTA);
   }
@@ -1252,8 +1618,6 @@
     state.erroConversa = null;
 
     carregarConversa();
-
-    // Marca como lida IMEDIATAMENTE ao abrir
     marcarComoLida(telefone);
 
     pararRefreshLista();
@@ -1264,8 +1628,7 @@
     if(!temConfig() || !telefone) return;
     try{
       await fetch(
-        state.backendUrl.replace(/\/+$/, "") + "/conversas/" +
-        encodeURIComponent(telefone) + "/read",
+        urlBase("/conversas/" + encodeURIComponent(telefone) + "/read"),
         {
           method: "POST",
           headers: {
@@ -1274,7 +1637,6 @@
           }
         }
       );
-      // Atualiza badge global
       atualizarBadge();
     }catch(e){}
   }
@@ -1366,7 +1728,7 @@
     let html = '<div class="lista">';
     conversas.forEach(c => {
       const nome = c.cliente || "Cliente";
-      const ultima = c.ultima_mensagem || "(sem mensagem)";
+      const ultima = previewUltima(c);
       const ehEnviada = c.ultima_direcao === "enviada";
       const horario = formatarHorario(c.ultima_data);
       const naoLidas = Number(c.mensagens_nao_lidas) || 0;
@@ -1402,6 +1764,8 @@
     const inputBar = document.getElementById("chatInputBar");
     const inputMensagem = document.getElementById("inputMensagem");
     const btnEnviar = document.getElementById("btnEnviar");
+    const btnAnexar = document.getElementById("btnAnexar");
+    const btnGravar = document.getElementById("btnGravar");
 
     if(state.carregandoConversa && state.mensagens.length === 0){
       container.innerHTML = `
@@ -1432,10 +1796,14 @@
     if(!state.janelaAberta){
       inputMensagem.disabled = true;
       btnEnviar.disabled = true;
+      btnAnexar.disabled = true;
+      btnGravar.disabled = true;
       inputMensagem.placeholder = "Janela de 24h fechada";
     } else {
       inputMensagem.disabled = state.enviando;
       btnEnviar.disabled = state.enviando || !inputMensagem.value.trim();
+      btnAnexar.disabled = state.enviando;
+      btnGravar.disabled = state.enviando;
       inputMensagem.placeholder = "Digite uma mensagem...";
     }
 
@@ -1466,6 +1834,9 @@
     setTimeout(() => {
       container.scrollTop = container.scrollHeight;
     }, 50);
+
+    // Carrega URLs assinadas para mídias sem src ainda
+    hidratarMidias();
   }
 
   function renderBubble(m){
@@ -1481,6 +1852,79 @@
       else statusIcon = "✓";
     }
 
+    const tipo = m.tipo || "text";
+
+    /* ---------- IMAGEM ---------- */
+    if(tipo === "image"){
+      const temUrl = !!m.media_url;
+      const srcLocal = m._localSrc || ""; // usado para preview otimista
+      const src = srcLocal || (m._urlAssinada || "");
+
+      const imgTag = temUrl || srcLocal
+        ? `<img class="chat-img" src="${escapeHtml(src)}" alt="Imagem" data-path="${escapeHtml(m.media_url || '')}" loading="lazy">`
+        : `<div style="padding:40px 20px;text-align:center;color:var(--muted);font-size:12px;">📷 Imagem indisponível</div>`;
+
+      const legenda = (m.conteudo && m.conteudo !== "[Imagem]")
+        ? `<div class="legenda">${escapeHtml(m.conteudo)}</div>`
+        : "";
+
+      return `
+        <div class="chat-msg ${classe}" data-msg-id="${escapeHtml(m.id || "")}">
+          <div class="chat-bubble bubble-img${erro}">
+            ${imgTag}
+            ${legenda}
+            <div class="meta">
+              <span>${escapeHtml(hora)}</span>
+              ${statusIcon ? `<span class="status">${statusIcon}</span>` : ""}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ---------- ÁUDIO / VOICE ---------- */
+    if(tipo === "audio" || tipo === "voice"){
+      const temUrl = !!m.media_url;
+      const srcLocal = m._localSrc || "";
+      const src = srcLocal || (m._urlAssinada || "");
+      const dur = m.media_duration || 0;
+      const durTexto = dur > 0 ? formatarDuracao(dur) : "--:--";
+
+      const audioTag = (temUrl || srcLocal)
+        ? `<audio preload="none" data-src="${escapeHtml(src)}" data-path="${escapeHtml(m.media_url || '')}"></audio>`
+        : `<div style="font-size:12px;color:var(--muted);">Áudio indisponível</div>`;
+
+      // Barras decorativas da onda (geradas a partir do id)
+      const barras = gerarBarrasOnda(m.id || "x");
+
+      return `
+        <div class="chat-msg ${classe}" data-msg-id="${escapeHtml(m.id || "")}">
+          <div class="chat-bubble bubble-audio${erro}">
+            <div class="audio-player" data-audio-id="${escapeHtml(m.id || "")}">
+              <button class="btn-play" type="button" data-play="${escapeHtml(m.id || "")}">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" data-icon="play">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" data-icon="pause" style="display:none;">
+                  <path d="M6 5h4v14H6zM14 5h4v14h-4z"/>
+                </svg>
+              </button>
+              <div class="onda" data-onda="${escapeHtml(m.id || "")}">
+                ${barras}
+              </div>
+              <div class="tempo" data-tempo="${escapeHtml(m.id || "")}">${escapeHtml(durTexto)}</div>
+            </div>
+            ${audioTag}
+            <div class="meta">
+              <span>${escapeHtml(hora)}</span>
+              ${statusIcon ? `<span class="status">${statusIcon}</span>` : ""}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* ---------- TEXTO (padrão) ---------- */
     return `
       <div class="chat-msg ${classe}" data-msg-id="${escapeHtml(m.id || "")}">
         <div class="chat-bubble${erro}">
@@ -1493,6 +1937,151 @@
       </div>
     `;
   }
+
+  function gerarBarrasOnda(seed){
+    // Gera 24 barras com alturas pseudo-aleatórias determinísticas
+    let h = 0;
+    for(let i = 0; i < seed.length; i++){
+      h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+    }
+    let html = "";
+    const N = 24;
+    for(let i = 0; i < N; i++){
+      h = (h * 1664525 + 1013904223) >>> 0;
+      const alt = 30 + (h % 70); // 30% a 100%
+      html += `<span class="barra" style="height:${alt}%"></span>`;
+    }
+    return html;
+  }
+
+  /* =========================================================
+     HIDRATAR MÍDIAS (URLs assinadas)
+     ========================================================= */
+  async function hidratarMidias(){
+    const imgs = document.querySelectorAll("img.chat-img[data-path]");
+    for(const img of imgs){
+      const path = img.getAttribute("data-path");
+      const srcAtual = img.getAttribute("src");
+      if(path && (!srcAtual || srcAtual === "")){
+        const url = await obterUrlAssinada(path);
+        if(url) img.src = url;
+      }
+    }
+
+    const audios = document.querySelectorAll("audio[data-path]");
+    for(const a of audios){
+      const path = a.getAttribute("data-path");
+      if(path && (!a.src || a.src === "" || a.src === window.location.href)){
+        const url = await obterUrlAssinada(path);
+        if(url) a.setAttribute("src", url);
+      }
+    }
+  }
+
+  /* =========================================================
+     AUDIO PLAYER CUSTOMIZADO
+     ========================================================= */
+  function pararAudioAtivo(exceto){
+    if(state.audioPlayerAtivo && state.audioPlayerAtivo !== exceto){
+      try{
+        state.audioPlayerAtivo.audio.pause();
+        state.audioPlayerAtivo.audio.currentTime = 0;
+      }catch(e){}
+      state.audioPlayerAtivo.btnPlay.querySelector('[data-icon="play"]').style.display = "";
+      state.audioPlayerAtivo.btnPlay.querySelector('[data-icon="pause"]').style.display = "none";
+      state.audioPlayerAtivo = null;
+    }
+  }
+
+  document.getElementById("chatContainer").addEventListener("click", async (e) => {
+    /* Play/pause do áudio */
+    const btnPlay = e.target.closest(".btn-play");
+    if(btnPlay){
+      const idMsg = btnPlay.getAttribute("data-play");
+      const wrap = btnPlay.closest(".audio-player");
+      const audio = wrap.parentElement.querySelector("audio");
+      const btn = btnPlay;
+      const iconPlay = btn.querySelector('[data-icon="play"]');
+      const iconPause = btn.querySelector('[data-icon="pause"]');
+      const onda = wrap.querySelector(".onda");
+      const tempoEl = wrap.querySelector(".tempo");
+
+      if(!audio || !audio.src){
+        alert("Áudio ainda carregando...");
+        return;
+      }
+
+      // Pausa outro player
+      pararAudioAtivo(wrap);
+
+      if(audio.paused){
+        try{
+          await audio.play();
+          iconPlay.style.display = "none";
+          iconPause.style.display = "";
+          state.audioPlayerAtivo = { audio, btnPlay: btn, wrap };
+
+          audio.ontimeupdate = () => {
+            const dur = audio.duration || 0;
+            const cur = audio.currentTime || 0;
+            if(dur > 0){
+              const pct = cur / dur;
+              const barras = onda.querySelectorAll(".barra");
+              const ativas = Math.floor(pct * barras.length);
+              barras.forEach((b, i) => {
+                if(i <= ativas) b.classList.add("ativa");
+                else b.classList.remove("ativa");
+              });
+              tempoEl.textContent = formatarDuracao(cur);
+            }
+          };
+
+          audio.onended = () => {
+            iconPlay.style.display = "";
+            iconPause.style.display = "none";
+            onda.querySelectorAll(".barra").forEach(b => b.classList.remove("ativa"));
+            const dur = audio.duration || 0;
+            tempoEl.textContent = dur > 0 ? formatarDuracao(dur) : "--:--";
+            state.audioPlayerAtivo = null;
+          };
+        }catch(err){
+          alert("Não foi possível tocar o áudio.");
+        }
+      } else {
+        audio.pause();
+        iconPlay.style.display = "";
+        iconPause.style.display = "none";
+      }
+      return;
+    }
+
+    /* Clique na imagem abre tela cheia */
+    const img = e.target.closest("img.chat-img");
+    if(img && img.src){
+      abrirImgFull(img.src);
+      return;
+    }
+
+    /* Botão de recarregar conversa */
+    const btnRecarregar = e.target.closest("#btnRecarregarConversaErro");
+    if(btnRecarregar) carregarConversa();
+  });
+
+  /* =========================================================
+     OVERLAY DE IMAGEM CHEIA
+     ========================================================= */
+  function abrirImgFull(src){
+    document.getElementById("imgFullEl").src = src;
+    document.getElementById("imgFull").classList.add("show");
+  }
+  function fecharImgFull(){
+    document.getElementById("imgFull").classList.remove("show");
+    document.getElementById("imgFullEl").src = "";
+  }
+  document.getElementById("btnFecharImgFull").addEventListener("click", fecharImgFull);
+  document.getElementById("imgFull").addEventListener("click", (e) => {
+    if(e.target.id === "imgFull") fecharImgFull();
+  });
 
   /* =========================================================
      API: LISTA
@@ -1510,8 +2099,7 @@
     }
 
     try{
-      const url = state.backendUrl.replace(/\/+$/, "") + "/conversas";
-      const resp = await fetch(url, {
+      const resp = await fetch(urlBase("/conversas"), {
         method: "GET",
         headers: { "x-api-key": state.apiKey }
       });
@@ -1547,12 +2135,13 @@
     }
 
     try{
-      const url = state.backendUrl.replace(/\/+$/, "") + "/conversas/" +
-                  encodeURIComponent(state.telefoneAtual);
-      const resp = await fetch(url, {
-        method: "GET",
-        headers: { "x-api-key": state.apiKey }
-      });
+      const resp = await fetch(
+        urlBase("/conversas/" + encodeURIComponent(state.telefoneAtual)),
+        {
+          method: "GET",
+          headers: { "x-api-key": state.apiKey }
+        }
+      );
 
       const data = await resp.json().catch(() => ({}));
       if(!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
@@ -1576,7 +2165,7 @@
   }
 
   /* =========================================================
-     API: ENVIAR
+     API: ENVIAR TEXTO
      ========================================================= */
   async function enviarMensagem(){
     const input = document.getElementById("inputMensagem");
@@ -1592,6 +2181,7 @@
       id: "temp_" + Date.now(),
       direcao: "enviada",
       conteudo: texto,
+      tipo: "text",
       enviado_em: new Date().toISOString(),
       _enviando: true
     };
@@ -1603,8 +2193,7 @@
     renderConversa();
 
     try{
-      const url = state.backendUrl.replace(/\/+$/, "") + "/responder";
-      const resp = await fetch(url, {
+      const resp = await fetch(urlBase("/responder"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1612,7 +2201,8 @@
         },
         body: JSON.stringify({
           telefone: state.telefoneAtual,
-          mensagem: texto
+          mensagem: texto,
+          type: "text"
         })
       });
 
@@ -1631,6 +2221,343 @@
       renderConversa();
     }
   }
+
+  /* =========================================================
+     API: UPLOAD DE MÍDIA (helper comum)
+     ========================================================= */
+  async function uploadMidia(fileOrBlob, filename, tipoEsperado){
+    const form = new FormData();
+    form.append("file", fileOrBlob, filename);
+    form.append("telefone", state.telefoneAtual || "");
+
+    const resp = await fetch(urlBase("/upload-media"), {
+      method: "POST",
+      headers: { "x-api-key": state.apiKey },
+      body: form
+    });
+
+    const data = await resp.json().catch(() => ({}));
+    if(!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+    if(!data.ok || !data.mediaId) throw new Error("upload falhou");
+
+    return data;
+  }
+
+  /* =========================================================
+     IMAGEM — escolher, pré-visualizar, enviar
+     ========================================================= */
+  document.getElementById("btnAnexar").addEventListener("click", () => {
+    if(!state.janelaAberta){
+      alert("Janela de 24h fechada.");
+      return;
+    }
+    document.getElementById("inputFile").click();
+  });
+
+  document.getElementById("inputFile").addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if(!file) return;
+
+    if(!file.type.startsWith("image/")){
+      alert("Selecione uma imagem (JPEG, PNG ou WEBP).");
+      return;
+    }
+    if(file.size > LIMITE_IMG){
+      alert("Imagem acima de 5 MB. Escolha uma menor.");
+      return;
+    }
+
+    // Prepara preview
+    const reader = new FileReader();
+    reader.onload = () => {
+      state.imagemPendente = { file, dataUrl: reader.result };
+      document.getElementById("previewImg").src = reader.result;
+      document.getElementById("legendaImg").value = "";
+      openOverlay("overlayImagem");
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById("btnEnviarImagem").addEventListener("click", async () => {
+    const img = state.imagemPendente;
+    if(!img) return;
+
+    const legenda = (document.getElementById("legendaImg").value || "").trim();
+
+    closeOverlay("overlayImagem");
+
+    // Bolha otimista com preview local
+    const tempId = "temp_img_" + Date.now();
+    const msgTemp = {
+      id: tempId,
+      direcao: "enviada",
+      conteudo: legenda || "[Imagem]",
+      tipo: "image",
+      enviado_em: new Date().toISOString(),
+      _enviando: true,
+      _localSrc: img.dataUrl
+    };
+    state.mensagens.push(msgTemp);
+    state.enviando = true;
+    renderConversa();
+
+    try{
+      // 1) Upload
+      const up = await uploadMidia(img.file, img.file.name || "foto.jpg", "image");
+
+      // 2) Enviar
+      const resp = await fetch(urlBase("/responder"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": state.apiKey
+        },
+        body: JSON.stringify({
+          telefone: state.telefoneAtual,
+          type: "image",
+          mediaId: up.mediaId,
+          mediaUrl: up.mediaUrl,
+          mediaMime: up.mediaMime,
+          caption: legenda
+        })
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if(!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+
+      msgTemp._enviando = false;
+      state.imagemPendente = null;
+      await carregarConversa({ silencioso: true });
+    }catch(err){
+      msgTemp._enviando = false;
+      msgTemp._erro = true;
+      renderConversa();
+      alert("Erro ao enviar imagem: " + err.message);
+    }finally{
+      state.enviando = false;
+      renderConversa();
+    }
+  });
+
+  /* =========================================================
+     ÁUDIO — gravação via MediaRecorder
+     ========================================================= */
+  function escolherMimeAudio(){
+    const candidatos = [
+      "audio/webm;codecs=opus",
+      "audio/webm",
+      "audio/mp4",
+      "audio/ogg;codecs=opus"
+    ];
+    if(typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return "";
+    for(const m of candidatos){
+      if(MediaRecorder.isTypeSupported(m)) return m;
+    }
+    return "";
+  }
+
+  async function iniciarGravacao(){
+    if(state.gravando) return;
+    if(!state.janelaAberta){
+      alert("Janela de 24h fechada.");
+      return;
+    }
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      alert("Este navegador não suporta gravação de áudio.");
+      return;
+    }
+
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      state.streamAudio = stream;
+
+      const mime = escolherMimeAudio();
+      const options = mime ? { mimeType: mime } : undefined;
+
+      let recorder;
+      try{
+        recorder = new MediaRecorder(stream, options);
+      }catch(e){
+        recorder = new MediaRecorder(stream);
+      }
+
+      state.mediaRecorder = recorder;
+      state.chunksAudio = [];
+      state.inicioGravacao = Date.now();
+      state.gravando = true;
+
+      recorder.ondataavailable = (e) => {
+        if(e.data && e.data.size > 0) state.chunksAudio.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        // tratado depois
+      };
+
+      recorder.start();
+
+      // UI de gravação
+      document.getElementById("chatInputBar").classList.add("gravando");
+      atualizarTempoGravacao();
+
+      state.timerGravacao = setInterval(atualizarTempoGravacao, 200);
+
+    }catch(err){
+      console.error("[audio] erro:", err);
+      alert("Não foi possível acessar o microfone. Verifique as permissões.");
+      pararStreamAudio();
+      state.gravando = false;
+    }
+  }
+
+  function atualizarTempoGravacao(){
+    const el = document.getElementById("tempoGrav");
+    if(!el) return;
+    const seg = Math.floor((Date.now() - state.inicioGravacao) / 1000);
+    el.textContent = formatarDuracao(seg);
+  }
+
+  function pararStreamAudio(){
+    if(state.streamAudio){
+      try{
+        state.streamAudio.getTracks().forEach(t => t.stop());
+      }catch(e){}
+      state.streamAudio = null;
+    }
+  }
+
+  function cancelarGravacao(){
+    if(!state.gravando) return;
+
+    try{
+      if(state.mediaRecorder && state.mediaRecorder.state !== "inactive"){
+        state.mediaRecorder.onstop = null;
+        state.mediaRecorder.stop();
+      }
+    }catch(e){}
+
+    state.chunksAudio = [];
+    state.gravando = false;
+
+    if(state.timerGravacao){
+      clearInterval(state.timerGravacao);
+      state.timerGravacao = null;
+    }
+
+    document.getElementById("chatInputBar").classList.remove("gravando");
+    pararStreamAudio();
+  }
+
+  async function finalizarGravacaoEEnviar(){
+    if(!state.gravando) return;
+
+    const duracaoSeg = Math.max(1, Math.round((Date.now() - state.inicioGravacao) / 1000));
+
+    // Para o recorder e espera o último chunk
+    const recorder = state.mediaRecorder;
+    const chunks = state.chunksAudio;
+
+    await new Promise((resolve) => {
+      if(!recorder || recorder.state === "inactive"){
+        resolve();
+        return;
+      }
+      recorder.onstop = () => resolve();
+      try{
+        recorder.stop();
+      }catch(e){ resolve(); }
+    });
+
+    // Finaliza estado
+    state.gravando = false;
+    if(state.timerGravacao){
+      clearInterval(state.timerGravacao);
+      state.timerGravacao = null;
+    }
+    document.getElementById("chatInputBar").classList.remove("gravando");
+    pararStreamAudio();
+
+    if(!chunks.length){
+      alert("Gravação vazia. Tente novamente.");
+      return;
+    }
+
+    const blob = new Blob(chunks, { type: chunks[0].type || "audio/webm" });
+
+    if(blob.size > LIMITE_AUDIO){
+      alert("Áudio acima de 16 MB. Grave um mais curto.");
+      return;
+    }
+
+    // Bolha otimista (com duração)
+    const tempId = "temp_aud_" + Date.now();
+    const localUrl = URL.createObjectURL(blob);
+
+    const msgTemp = {
+      id: tempId,
+      direcao: "enviada",
+      conteudo: "[Mensagem de voz]",
+      tipo: "voice",
+      enviado_em: new Date().toISOString(),
+      media_duration: duracaoSeg,
+      _enviando: true,
+      _localSrc: localUrl
+    };
+    state.mensagens.push(msgTemp);
+    state.enviando = true;
+    renderConversa();
+
+    try{
+      const ext = (blob.type.indexOf("mp4") >= 0) ? "m4a"
+                : (blob.type.indexOf("ogg") >= 0) ? "ogg"
+                : "webm";
+
+      const up = await uploadMidia(blob, "audio." + ext, "audio");
+
+      const resp = await fetch(urlBase("/responder"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": state.apiKey
+        },
+        body: JSON.stringify({
+          telefone: state.telefoneAtual,
+          type: "voice",
+          mediaId: up.mediaId,
+          mediaUrl: up.mediaUrl,
+          mediaMime: up.mediaMime,
+          mediaDuration: up.mediaDuration || duracaoSeg
+        })
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if(!resp.ok) throw new Error(data.error || ("HTTP " + resp.status));
+
+      msgTemp._enviando = false;
+      try{ URL.revokeObjectURL(localUrl); }catch(e){}
+      await carregarConversa({ silencioso: true });
+    }catch(err){
+      msgTemp._enviando = false;
+      msgTemp._erro = true;
+      renderConversa();
+      alert("Erro ao enviar áudio: " + err.message);
+    }finally{
+      state.enviando = false;
+      renderConversa();
+    }
+  }
+
+  // Botões de gravação
+  document.getElementById("btnGravar").addEventListener("click", () => {
+    iniciarGravacao();
+  });
+  document.getElementById("btnPararGrav").addEventListener("click", () => {
+    finalizarGravacaoEEnviar();
+  });
+  document.getElementById("btnCancelarGrav").addEventListener("click", () => {
+    cancelarGravacao();
+  });
 
   /* =========================================================
      EVENTOS: LISTA
@@ -1692,11 +2619,6 @@
     carregarConversa();
   });
 
-  document.getElementById("chatContainer").addEventListener("click", e => {
-    const btnRecarregar = e.target.closest("#btnRecarregarConversaErro");
-    if(btnRecarregar) carregarConversa();
-  });
-
   const inputMensagem = document.getElementById("inputMensagem");
   const btnEnviar = document.getElementById("btnEnviar");
 
@@ -1708,8 +2630,16 @@
 
   btnEnviar.addEventListener("click", enviarMensagem);
 
+  // Enter sem shift envia
+  inputMensagem.addEventListener("keydown", (e) => {
+    if(e.key === "Enter" && !e.shiftKey){
+      e.preventDefault();
+      if(!btnEnviar.disabled) enviarMensagem();
+    }
+  });
+
   /* =========================================================
-     VISIBILITY CHANGE — atualiza ao voltar para o app
+     VISIBILITY CHANGE
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
@@ -1729,14 +2659,13 @@
     navigator.serviceWorker.addEventListener("message", (event) => {
       const data = event.data || {};
       if(data.type === "abrirConversa" && data.telefone){
-        // Se estiver na lista, abre a conversa
         mostrarConversa(data.telefone, data.cliente || "Cliente");
       }
     });
   }
 
   /* =========================================================
-     DEEP-LINK via URL: ?tel=...&cliente=...
+     DEEP-LINK via URL
      ========================================================= */
   function checarDeepLink(){
     const params = new URLSearchParams(window.location.search);
@@ -1744,13 +2673,11 @@
     const cliente = params.get("cliente") || "Cliente";
 
     if(tel && temConfig()){
-      // Limpa a URL sem recarregar
       try{
         const urlLimpa = window.location.pathname + window.location.hash;
         window.history.replaceState({}, "", urlLimpa);
       }catch(e){}
 
-      // Pequeno delay para garantir que o boot terminou
       setTimeout(() => {
         mostrarConversa(tel, cliente);
       }, 300);
@@ -1776,7 +2703,6 @@
     atualizarPushUI();
 
     if(temConfig()){
-      // Se veio com deep-link (?tel=...), o checarDeepLink cuida de abrir
       const temDeepLink = checarDeepLink();
 
       if(!temDeepLink){
