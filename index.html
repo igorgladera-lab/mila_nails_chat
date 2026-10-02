@@ -65,6 +65,8 @@
     --push-erro:#fce4ec;
     --push-erro-borda:#f48fb1;
     --push-erro-texto:#ad1457;
+    --badge-bg:#25d366;
+    --badge-text:#ffffff;
   }
 
   html[data-theme="dark"]{
@@ -97,6 +99,8 @@
     --push-erro:#3a1e2a;
     --push-erro-borda:#6a2a4a;
     --push-erro-texto:#f48fb1;
+    --badge-bg:#25d366;
+    --badge-text:#ffffff;
   }
 
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -272,6 +276,10 @@
     flex:1;
   }
 
+  .conversa .nome.negrito{
+    font-weight:800;
+  }
+
   .conversa .horario{
     font-size:11px;
     color:var(--muted);
@@ -290,6 +298,36 @@
     content:"Você: ";
     color:var(--primary);
     font-weight:600;
+  }
+
+  /* ====== BADGE DE NÃO LIDAS ====== */
+  .conversa .badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:20px;
+    height:20px;
+    padding:0 6px;
+    border-radius:10px;
+    background:var(--badge-bg);
+    color:var(--badge-text);
+    font-size:11px;
+    font-weight:700;
+    line-height:1;
+    flex:0 0 auto;
+    margin-left:6px;
+    box-shadow:0 1px 2px rgba(0,0,0,.15);
+  }
+  .conversa .badge.mais{
+    font-size:10px;
+    letter-spacing:0;
+  }
+
+  .conversa .linha-badge{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex:0 0 auto;
   }
 
   .vazio, .carregando, .erro{
@@ -787,7 +825,8 @@
 
   const LS_CONFIG = "mila_whats_config";
   const LS_TEMA   = "mila_whats_tema";
-  const INTERVALO_REFRESH = 15000;
+  const INTERVALO_REFRESH_LISTA    = 30000;  // 30s
+  const INTERVALO_REFRESH_CONVERSA = 15000;  // 15s
 
   // VAPID Public Key — usada para gerar as subscriptions
   const VAPID_PUBLIC_KEY = "BPaeCnBrwLNEAYDwSWy9UI_ZsoBCLsbiJjNtagxCa3PC9gNa8rTuUpngtyBJsaM4FktUkfhHp3rmgmwcTjjL8AE";
@@ -812,7 +851,8 @@
     janelaAberta: false,
     janelaFechaEm: null,
 
-    timerRefresh: null,
+    timerRefreshLista: null,
+    timerRefreshConversa: null,
 
     // Push
     swRegistration: null,
@@ -907,8 +947,14 @@
     return { aberta: false, fechaEm: null };
   }
 
+  function formatarBadge(n){
+    if(!n || n <= 0) return "";
+    if(n > 99) return "99+";
+    return String(n);
+  }
+
   /* =========================================================
-     BADGE
+     BADGE DO ÍCONE (PWA)
      ========================================================= */
   async function atualizarBadge(){
     if(!("setAppBadge" in navigator)) return;
@@ -918,7 +964,7 @@
     }
 
     try{
-      const url = state.backendUrl.replace(/\/+$/, "") + "/conversas";
+      const url = state.backendUrl.replace(/\/+$/, "") + "/conversas/nao-lidas/total";
       const resp = await fetch(url, {
         method: "GET",
         headers: { "x-api-key": state.apiKey }
@@ -929,14 +975,7 @@
         return;
       }
 
-      const conversas = Array.isArray(data.conversas) ? data.conversas : [];
-      let total = 0;
-      conversas.forEach(c => {
-        if(typeof c.mensagens_nao_lidas === "number" && c.mensagens_nao_lidas > 0){
-          total += c.mensagens_nao_lidas;
-        }
-      });
-
+      const total = Number(data.total) || 0;
       if(total > 0) await navigator.setAppBadge(total);
       else          await navigator.clearAppBadge();
     }catch(e){}
@@ -945,8 +984,6 @@
   /* =========================================================
      PUSH NOTIFICATIONS
      ========================================================= */
-
-  // Converte base64url em Uint8Array (exigido pela API do navegador)
   function urlBase64ToUint8Array(base64String){
     const padding = "=".repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -958,7 +995,6 @@
     return outputArray;
   }
 
-  // Detecta suporte
   function detectarSuportePush(){
     const temSW = "serviceWorker" in navigator;
     const temPush = "PushManager" in window;
@@ -967,7 +1003,6 @@
     return state.pushSuportado;
   }
 
-  // Registra o Service Worker
   async function registrarServiceWorker(){
     if(!("serviceWorker" in navigator)) return null;
     try{
@@ -980,7 +1015,6 @@
     }
   }
 
-  // Atualiza o status visual do bloco de notificações
   function atualizarPushUI(){
     const statusEl = document.getElementById("pushStatus");
     const btnEl = document.getElementById("btnAtivarPush");
@@ -1030,7 +1064,6 @@
     btnEl.textContent = "Ativar notificações";
   }
 
-  // Verifica se já existe subscription salva no navegador
   async function verificarSubscriptionExistente(){
     if(!state.swRegistration) return;
     try{
@@ -1046,7 +1079,6 @@
     }
   }
 
-  // Ativa notificações (pede permissão + cria subscription + envia ao backend)
   async function ativarPush(){
     if(!temConfig()){
       alert("Preencha a URL e a API Key primeiro.");
@@ -1058,7 +1090,6 @@
     btn.textContent = "Ativando...";
 
     try{
-      // 1. Pedir permissão
       const permissao = await Notification.requestPermission();
       if(permissao !== "granted"){
         alert("Permissão negada. Você pode reativar nas configurações do navegador.");
@@ -1066,7 +1097,6 @@
         return;
       }
 
-      // 2. Garantir Service Worker registrado
       if(!state.swRegistration){
         state.swRegistration = await registrarServiceWorker();
       }
@@ -1076,10 +1106,8 @@
         return;
       }
 
-      // 3. Aguardar o SW estar pronto
       await navigator.serviceWorker.ready;
 
-      // 4. Criar subscription
       const sub = await state.swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -1088,7 +1116,6 @@
       state.pushSubscription = sub;
       state.pushAtivo = true;
 
-      // 5. Enviar subscription para o backend
       const resp = await fetch(state.backendUrl.replace(/\/+$/, "") + "/subscribe", {
         method: "POST",
         headers: {
@@ -1116,7 +1143,6 @@
     }
   }
 
-  // Desativa notificações (remove subscription)
   async function desativarPush(){
     const btn = document.getElementById("btnAtivarPush");
     btn.disabled = true;
@@ -1124,7 +1150,6 @@
 
     try{
       if(state.pushSubscription){
-        // Avisa o backend para remover
         try{
           await fetch(state.backendUrl.replace(/\/+$/, "") + "/unsubscribe", {
             method: "POST",
@@ -1172,6 +1197,37 @@
   /* =========================================================
      NAVEGAÇÃO
      ========================================================= */
+  function pararRefreshLista(){
+    if(state.timerRefreshLista){
+      clearInterval(state.timerRefreshLista);
+      state.timerRefreshLista = null;
+    }
+  }
+
+  function pararRefreshConversa(){
+    if(state.timerRefreshConversa){
+      clearInterval(state.timerRefreshConversa);
+      state.timerRefreshConversa = null;
+    }
+  }
+
+  function iniciarRefreshLista(){
+    pararRefreshLista();
+    state.timerRefreshLista = setInterval(() => {
+      if(document.visibilityState !== "visible") return;
+      if(state.telefoneAtual) return; // só quando estamos na lista
+      carregarConversas({ silencioso: true });
+    }, INTERVALO_REFRESH_LISTA);
+  }
+
+  function iniciarRefreshConversa(){
+    pararRefreshConversa();
+    state.timerRefreshConversa = setInterval(() => {
+      if(document.visibilityState !== "visible") return;
+      if(state.telefoneAtual) carregarConversa({ silencioso: true });
+    }, INTERVALO_REFRESH_CONVERSA);
+  }
+
   function mostrarLista(){
     document.getElementById("telaConversa").style.display = "none";
     document.getElementById("telaLista").style.display = "block";
@@ -1179,10 +1235,8 @@
     state.clienteAtual = "";
     state.mensagens = [];
 
-    if(state.timerRefresh){
-      clearInterval(state.timerRefresh);
-      state.timerRefresh = null;
-    }
+    pararRefreshConversa();
+    iniciarRefreshLista();
 
     carregarConversas();
   }
@@ -1199,10 +1253,30 @@
 
     carregarConversa();
 
-    if(state.timerRefresh) clearInterval(state.timerRefresh);
-    state.timerRefresh = setInterval(() => {
-      if(state.telefoneAtual) carregarConversa({ silencioso: true });
-    }, INTERVALO_REFRESH);
+    // Marca como lida IMEDIATAMENTE ao abrir
+    marcarComoLida(telefone);
+
+    pararRefreshLista();
+    iniciarRefreshConversa();
+  }
+
+  async function marcarComoLida(telefone){
+    if(!temConfig() || !telefone) return;
+    try{
+      await fetch(
+        state.backendUrl.replace(/\/+$/, "") + "/conversas/" +
+        encodeURIComponent(telefone) + "/read",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": state.apiKey
+          }
+        }
+      );
+      // Atualiza badge global
+      atualizarBadge();
+    }catch(e){}
   }
 
   /* =========================================================
@@ -1218,7 +1292,7 @@
       return;
     }
 
-    if(state.carregando){
+    if(state.carregando && state.conversas.length === 0){
       content.innerHTML = renderCarregando();
       btnReload.style.display = "flex";
       return;
@@ -1295,14 +1369,21 @@
       const ultima = c.ultima_mensagem || "(sem mensagem)";
       const ehEnviada = c.ultima_direcao === "enviada";
       const horario = formatarHorario(c.ultima_data);
+      const naoLidas = Number(c.mensagens_nao_lidas) || 0;
+      const temNaoLida = naoLidas > 0;
+      const badgeTexto = formatarBadge(naoLidas);
+      const badgeMais = naoLidas > 99 ? "mais" : "";
 
       html += `
         <div class="conversa" data-telefone="${escapeHtml(c.telefone)}" data-cliente="${escapeHtml(nome)}">
           <div class="avatar">${escapeHtml(iniciais(nome))}</div>
           <div class="info">
             <div class="linha1">
-              <div class="nome">${escapeHtml(nome)}</div>
-              <div class="horario">${escapeHtml(horario)}</div>
+              <div class="nome ${temNaoLida ? 'negrito' : ''}">${escapeHtml(nome)}</div>
+              <div class="linha-badge">
+                <div class="horario">${escapeHtml(horario)}</div>
+                ${temNaoLida ? `<span class="badge ${badgeMais}">${badgeTexto}</span>` : ""}
+              </div>
             </div>
             <div class="ultima ${ehEnviada ? 'enviada' : ''}">${escapeHtml(ultima)}</div>
           </div>
@@ -1416,12 +1497,17 @@
   /* =========================================================
      API: LISTA
      ========================================================= */
-  async function carregarConversas(){
+  async function carregarConversas(opts){
+    opts = opts || {};
+    const silencioso = !!opts.silencioso;
+
     if(!temConfig()) return;
 
-    state.carregando = true;
-    state.erro = null;
-    renderLista();
+    if(!silencioso){
+      state.carregando = true;
+      state.erro = null;
+      renderLista();
+    }
 
     try{
       const url = state.backendUrl.replace(/\/+$/, "") + "/conversas";
@@ -1437,10 +1523,10 @@
       state.erro = null;
     }catch(err){
       state.erro = err.message || "Erro desconhecido";
-      state.conversas = [];
+      if(!silencioso) state.conversas = [];
     }finally{
       state.carregando = false;
-      renderLista();
+      if(!state.telefoneAtual) renderLista();
       atualizarBadge();
     }
   }
@@ -1485,7 +1571,7 @@
       state.erroConversa = err.message || "Erro desconhecido";
     }finally{
       state.carregandoConversa = false;
-      renderConversa();
+      if(state.telefoneAtual) renderConversa();
     }
   }
 
@@ -1623,13 +1709,55 @@
   btnEnviar.addEventListener("click", enviarMensagem);
 
   /* =========================================================
-     BADGE — atualiza ao voltar para o app
+     VISIBILITY CHANGE — atualiza ao voltar para o app
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
       atualizarBadge();
+      if(state.telefoneAtual){
+        carregarConversa({ silencioso: true });
+      } else {
+        carregarConversas({ silencioso: true });
+      }
     }
   });
+
+  /* =========================================================
+     SERVICE WORKER: mensagens (deep-link)
+     ========================================================= */
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      const data = event.data || {};
+      if(data.type === "abrirConversa" && data.telefone){
+        // Se estiver na lista, abre a conversa
+        mostrarConversa(data.telefone, data.cliente || "Cliente");
+      }
+    });
+  }
+
+  /* =========================================================
+     DEEP-LINK via URL: ?tel=...&cliente=...
+     ========================================================= */
+  function checarDeepLink(){
+    const params = new URLSearchParams(window.location.search);
+    const tel = params.get("tel");
+    const cliente = params.get("cliente") || "Cliente";
+
+    if(tel && temConfig()){
+      // Limpa a URL sem recarregar
+      try{
+        const urlLimpa = window.location.pathname + window.location.hash;
+        window.history.replaceState({}, "", urlLimpa);
+      }catch(e){}
+
+      // Pequeno delay para garantir que o boot terminou
+      setTimeout(() => {
+        mostrarConversa(tel, cliente);
+      }, 300);
+      return true;
+    }
+    return false;
+  }
 
   /* =========================================================
      BOOT
@@ -1638,7 +1766,6 @@
     loadConfig();
     renderLista();
 
-    // Registra o Service Worker (silencioso)
     if("serviceWorker" in navigator){
       try{
         state.swRegistration = await registrarServiceWorker();
@@ -1649,7 +1776,14 @@
     atualizarPushUI();
 
     if(temConfig()){
-      carregarConversas();
+      // Se veio com deep-link (?tel=...), o checarDeepLink cuida de abrir
+      const temDeepLink = checarDeepLink();
+
+      if(!temDeepLink){
+        carregarConversas();
+        iniciarRefreshLista();
+      }
+
       atualizarBadge();
     }
   }
