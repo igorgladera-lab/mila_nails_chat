@@ -991,7 +991,6 @@
     display:block;
   }
 
-  /* ====== BANNER DE AVISO (push revogado) ====== */
   .aviso-push{
     position:fixed;
     left:0;
@@ -1250,7 +1249,10 @@
     timerGravacao: null,
     streamAudio: null,
 
-    audioPlayerAtivo: null
+    audioPlayerAtivo: null,
+
+    // v1.9: controle de navegação pelo histórico
+    navegacaoInterna: false
   };
 
   /* =========================================================
@@ -1532,13 +1534,8 @@
   }
 
   /* =========================================================
-     PUSH — renovação silenciosa (v1.8.4)
+     PUSH — renovação silenciosa
      ========================================================= */
-
-  /**
-   * Reenvia a subscription atual para o backend.
-   * Idempotente (usa upsert no servidor).
-   */
   async function reenviarSubscription(sub){
     if(!sub || !temConfig()) return;
     try{
@@ -1558,13 +1555,6 @@
     }
   }
 
-  /**
-   * Verifica se a subscription existe.
-   * - Se existir: reenvia pro backend e marca como ativa.
-   * - Se NÃO existir mas permissão ainda estiver "granted":
-   *   rerecreve silenciosamente + reenvia.
-   * - Caso contrário: marca como inativa e mostra banner se denied.
-   */
   async function verificarErenovarSubscription(){
     if(!state.swRegistration) return;
 
@@ -1577,7 +1567,6 @@
       sub = null;
     }
 
-    // CASO 1: subscription existe → reenvia pro backend
     if(sub){
       state.pushSubscription = sub;
       state.pushAtivo = true;
@@ -1586,8 +1575,6 @@
       return;
     }
 
-    // CASO 2: subscription sumiu, mas permissão foi concedida
-    //         → rerecreve silenciosamente
     if(permissao === "granted" && temConfig()){
       try{
         const novaSub = await state.swRegistration.pushManager.subscribe({
@@ -1606,16 +1593,12 @@
       return;
     }
 
-    // CASO 3: permissão revogada pelo sistema → mostra banner
     state.pushAtivo = false;
     if(permissao === "denied"){
       mostrarAvisoPush();
     }
   }
 
-  /**
-   * Mostra os banners de aviso (lista e conversa).
-   */
   function mostrarAvisoPush(){
     const el1 = document.getElementById("avisoPush");
     if(el1) el1.classList.add("show");
@@ -1624,9 +1607,6 @@
     document.body.classList.add("tem-aviso-push");
   }
 
-  /**
-   * Esconde os banners de aviso.
-   */
   function esconderAvisoPush(){
     const el1 = document.getElementById("avisoPush");
     if(el1) el1.classList.remove("show");
@@ -1785,7 +1765,11 @@
     }, INTERVALO_REFRESH_CONVERSA);
   }
 
-  function mostrarLista(){
+  /**
+   * v1.9: mostraLista aceita um parâmetro para saber se foi
+   * navegação vinda do botão voltar do celular (não empilha estado).
+   */
+  function mostrarLista(fromPopState){
     document.getElementById("telaConversa").style.display = "none";
     document.getElementById("telaLista").style.display = "block";
     state.telefoneAtual = null;
@@ -1796,8 +1780,23 @@
     iniciarRefreshLista();
 
     carregarConversas();
+
+    // v1.9: se NÃO veio do botão voltar (popstate),
+    // empurra um estado "lista" para o histórico.
+    // Assim o botão voltar na lista fecha o app.
+    if(!fromPopState){
+      // Remove a hash "conversa" se estiver presente
+      if(window.location.hash === "#conversa"){
+        try{
+          history.replaceState({ tela: "lista" }, "", window.location.pathname);
+        }catch(e){}
+      }
+    }
   }
 
+  /**
+   * v1.9: mostraConversa agora empurra um estado no histórico.
+   */
   function mostrarConversa(telefone, nome){
     document.getElementById("telaLista").style.display = "none";
     document.getElementById("telaConversa").style.display = "block";
@@ -1814,6 +1813,15 @@
 
     pararRefreshLista();
     iniciarRefreshConversa();
+
+    // v1.9: empurra estado no histórico para o botão voltar funcionar
+    try{
+      history.pushState(
+        { tela: "conversa", telefone: telefone, cliente: nomeFinal },
+        "",
+        "#conversa"
+      );
+    }catch(e){}
   }
 
   async function marcarComoLida(telefone){
@@ -1832,6 +1840,17 @@
       atualizarBadge();
     }catch(e){}
   }
+
+  /* =========================================================
+     v1.9: POPSTATE — botão voltar do celular
+     ========================================================= */
+  window.addEventListener("popstate", (event) => {
+    // Se está numa conversa, volta para a lista
+    if(state.telefoneAtual){
+      mostrarLista(true);
+    }
+    // Se já está na lista, deixa o navegador fechar o app naturalmente
+  });
 
   /* =========================================================
      RENDER: LISTA
@@ -2788,7 +2807,7 @@
   });
 
   /* =========================================================
-     EVENTOS: BANNER DE AVISO DE PUSH (v1.8.4)
+     EVENTOS: BANNER DE AVISO DE PUSH
      ========================================================= */
   document.getElementById("btnFecharAvisoPush").addEventListener("click", () => {
     esconderAvisoPush();
@@ -2817,7 +2836,15 @@
   /* =========================================================
      EVENTOS: CONVERSA
      ========================================================= */
-  document.getElementById("btnVoltar").addEventListener("click", mostrarLista);
+  document.getElementById("btnVoltar").addEventListener("click", () => {
+    // v1.9: usa history.back() para acionar o popstate
+    // Se por algum motivo não houver estado no histórico, cai no fallback
+    if(window.history.length > 1 && state.telefoneAtual){
+      window.history.back();
+    } else {
+      mostrarLista(true);
+    }
+  });
 
   document.getElementById("btnReloadConversa").addEventListener("click", () => {
     carregarConversa();
@@ -2842,13 +2869,12 @@
   });
 
   /* =========================================================
-     VISIBILITY CHANGE — v1.8.4 com reenvio de subscription
+     VISIBILITY CHANGE
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
       atualizarBadge();
 
-      // v1.8.4: reenvia subscription ao voltar pro app
       if(state.pushSubscription){
         reenviarSubscription(state.pushSubscription);
       }
@@ -2896,11 +2922,16 @@
   }
 
   /* =========================================================
-     BOOT — v1.8.4
+     BOOT
      ========================================================= */
   async function boot(){
     loadConfig();
     renderLista();
+
+    // v1.9: substitui qualquer estado inicial no histórico por "lista"
+    try{
+      history.replaceState({ tela: "lista" }, "", window.location.pathname);
+    }catch(e){}
 
     if("serviceWorker" in navigator){
       try{
