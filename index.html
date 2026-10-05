@@ -193,6 +193,7 @@
     overflow-y:auto;
     -webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;
+    transition:top .15s;
   }
 
   .btn-float{
@@ -401,6 +402,7 @@
     background:var(--chat-bg);
     padding:12px 8px;
     overscroll-behavior:contain;
+    transition:top .15s;
   }
 
   .chat-aviso-24h{
@@ -989,6 +991,80 @@
     display:block;
   }
 
+  /* ====== BANNER DE AVISO (push revogado) ====== */
+  .aviso-push{
+    position:fixed;
+    left:0;
+    right:0;
+    top:calc(var(--header-h) + env(safe-area-inset-top));
+    background:#fff3e0;
+    border-bottom:1px solid #f0a800;
+    color:#6b5200;
+    padding:10px 14px;
+    font-size:13px;
+    line-height:1.4;
+    display:none;
+    align-items:center;
+    gap:10px;
+    z-index:9;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+  }
+  .aviso-push.show{
+    display:flex;
+  }
+  .aviso-push .aviso-icone{
+    font-size:18px;
+    flex:0 0 auto;
+  }
+  .aviso-push .aviso-texto{
+    flex:1;
+    min-width:0;
+  }
+  .aviso-push .aviso-btn{
+    background:#f0a800;
+    color:#fff;
+    border:none;
+    border-radius:6px;
+    padding:6px 12px;
+    font-size:12px;
+    font-weight:700;
+    cursor:pointer;
+    flex:0 0 auto;
+  }
+  .aviso-push .aviso-btn:active{
+    opacity:.85;
+  }
+  .aviso-push .aviso-fechar{
+    background:transparent;
+    border:none;
+    color:#6b5200;
+    font-size:18px;
+    cursor:pointer;
+    padding:0 4px;
+    line-height:1;
+    flex:0 0 auto;
+  }
+
+  body.tem-aviso-push .content{
+    top:calc(var(--header-h) + env(safe-area-inset-top) + 44px);
+  }
+  body.tem-aviso-push .chat-container{
+    top:calc(var(--header-h) + env(safe-area-inset-top) + 44px);
+  }
+
+  html[data-theme="dark"] .aviso-push{
+    background:#3a2e18;
+    border-bottom-color:#d99a00;
+    color:#f0d580;
+  }
+  html[data-theme="dark"] .aviso-push .aviso-btn{
+    background:#d99a00;
+    color:#1a1a1a;
+  }
+  html[data-theme="dark"] .aviso-push .aviso-fechar{
+    color:#f0d580;
+  }
+
   ::-webkit-scrollbar{ width:0; height:0; }
 </style>
 </head>
@@ -999,6 +1075,13 @@
     <span class="header-title">💬 Mila Whats</span>
     <button class="header-btn" id="btnConfig" aria-label="Configurações">⚙️</button>
   </header>
+
+  <div class="aviso-push" id="avisoPush">
+    <span class="aviso-icone">⚠️</span>
+    <span class="aviso-texto">Notificações desativadas pelo sistema. Toque em reativar.</span>
+    <button class="aviso-btn" id="btnReativarPush">Reativar</button>
+    <button class="aviso-fechar" id="btnFecharAvisoPush" aria-label="Fechar">✕</button>
+  </div>
 
   <div class="content" id="content"></div>
 
@@ -1013,6 +1096,13 @@
     </span>
     <button class="header-btn" id="btnReloadConversa" aria-label="Recarregar">🔄</button>
   </header>
+
+  <div class="aviso-push" id="avisoPushConv">
+    <span class="aviso-icone">⚠️</span>
+    <span class="aviso-texto">Notificações desativadas pelo sistema.</span>
+    <button class="aviso-btn" id="btnReativarPushConv">Reativar</button>
+    <button class="aviso-fechar" id="btnFecharAvisoPushConv" aria-label="Fechar">✕</button>
+  </div>
 
   <div class="chat-container" id="chatContainer"></div>
 
@@ -1441,19 +1531,108 @@
     btnEl.textContent = "Ativar notificações";
   }
 
-  async function verificarSubscriptionExistente(){
-    if(!state.swRegistration) return;
+  /* =========================================================
+     PUSH — renovação silenciosa (v1.8.4)
+     ========================================================= */
+
+  /**
+   * Reenvia a subscription atual para o backend.
+   * Idempotente (usa upsert no servidor).
+   */
+  async function reenviarSubscription(sub){
+    if(!sub || !temConfig()) return;
     try{
-      const sub = await state.swRegistration.pushManager.getSubscription();
-      if(sub){
-        state.pushSubscription = sub;
-        state.pushAtivo = true;
-      } else {
-        state.pushAtivo = false;
+      const resp = await fetch(urlBase("/subscribe"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": state.apiKey
+        },
+        body: JSON.stringify({ subscription: sub })
+      });
+      if(!resp.ok){
+        console.warn("[push] falha ao reenviar subscription:", resp.status);
       }
     }catch(e){
-      state.pushAtivo = false;
+      console.warn("[push] erro ao reenviar subscription:", e.message);
     }
+  }
+
+  /**
+   * Verifica se a subscription existe.
+   * - Se existir: reenvia pro backend e marca como ativa.
+   * - Se NÃO existir mas permissão ainda estiver "granted":
+   *   rerecreve silenciosamente + reenvia.
+   * - Caso contrário: marca como inativa e mostra banner se denied.
+   */
+  async function verificarErenovarSubscription(){
+    if(!state.swRegistration) return;
+
+    const permissao = ("Notification" in window) ? Notification.permission : "default";
+    let sub = null;
+
+    try{
+      sub = await state.swRegistration.pushManager.getSubscription();
+    }catch(e){
+      sub = null;
+    }
+
+    // CASO 1: subscription existe → reenvia pro backend
+    if(sub){
+      state.pushSubscription = sub;
+      state.pushAtivo = true;
+      await reenviarSubscription(sub);
+      esconderAvisoPush();
+      return;
+    }
+
+    // CASO 2: subscription sumiu, mas permissão foi concedida
+    //         → rerecreve silenciosamente
+    if(permissao === "granted" && temConfig()){
+      try{
+        const novaSub = await state.swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
+        state.pushSubscription = novaSub;
+        state.pushAtivo = true;
+        await reenviarSubscription(novaSub);
+        console.log("[push] subscription renovada silenciosamente");
+        esconderAvisoPush();
+      }catch(err){
+        console.warn("[push] não foi possível renovar:", err.message);
+        state.pushAtivo = false;
+      }
+      return;
+    }
+
+    // CASO 3: permissão revogada pelo sistema → mostra banner
+    state.pushAtivo = false;
+    if(permissao === "denied"){
+      mostrarAvisoPush();
+    }
+  }
+
+  /**
+   * Mostra os banners de aviso (lista e conversa).
+   */
+  function mostrarAvisoPush(){
+    const el1 = document.getElementById("avisoPush");
+    if(el1) el1.classList.add("show");
+    const el2 = document.getElementById("avisoPushConv");
+    if(el2) el2.classList.add("show");
+    document.body.classList.add("tem-aviso-push");
+  }
+
+  /**
+   * Esconde os banners de aviso.
+   */
+  function esconderAvisoPush(){
+    const el1 = document.getElementById("avisoPush");
+    if(el1) el1.classList.remove("show");
+    const el2 = document.getElementById("avisoPushConv");
+    if(el2) el2.classList.remove("show");
+    document.body.classList.remove("tem-aviso-push");
   }
 
   async function ativarPush(){
@@ -1507,6 +1686,7 @@
         throw new Error(data.error || ("HTTP " + resp.status));
       }
 
+      esconderAvisoPush();
       alert("Notificações ativadas com sucesso!");
       atualizarPushUI();
 
@@ -2228,7 +2408,6 @@
 
   /* =========================================================
      API: UPLOAD DE MÍDIA
-     Aceita duracaoSeg opcional (só para áudio) — v1.8.2
      ========================================================= */
   async function uploadMidia(fileOrBlob, filename, tipoEsperado, duracaoSeg){
     const form = new FormData();
@@ -2453,7 +2632,6 @@
   async function finalizarGravacaoEEnviar(){
     if(!state.gravando) return;
 
-    // Duração real medida pelo frontend
     const duracaoSeg = Math.max(1, Math.round((Date.now() - state.inicioGravacao) / 1000));
 
     const recorder = state.mediaRecorder;
@@ -2512,7 +2690,6 @@
                 : (blob.type.indexOf("ogg") >= 0) ? "ogg"
                 : "webm";
 
-      // v1.8.2: passa a duração real para o upload
       const up = await uploadMidia(blob, "audio." + ext, "audio", duracaoSeg);
 
       const resp = await fetch(urlBase("/responder"), {
@@ -2527,7 +2704,6 @@
           mediaId: up.mediaId,
           mediaUrl: up.mediaUrl,
           mediaMime: up.mediaMime,
-          // v1.8.2: sempre usa a duração real medida pelo frontend
           mediaDuration: duracaoSeg
         })
       });
@@ -2612,6 +2788,33 @@
   });
 
   /* =========================================================
+     EVENTOS: BANNER DE AVISO DE PUSH (v1.8.4)
+     ========================================================= */
+  document.getElementById("btnFecharAvisoPush").addEventListener("click", () => {
+    esconderAvisoPush();
+  });
+
+  document.getElementById("btnReativarPush").addEventListener("click", () => {
+    esconderAvisoPush();
+    document.getElementById("cfgBackendUrl").value = state.backendUrl || "";
+    document.getElementById("cfgApiKey").value = state.apiKey || "";
+    atualizarPushUI();
+    openOverlay("overlayConfig");
+  });
+
+  document.getElementById("btnFecharAvisoPushConv").addEventListener("click", () => {
+    esconderAvisoPush();
+  });
+
+  document.getElementById("btnReativarPushConv").addEventListener("click", () => {
+    esconderAvisoPush();
+    document.getElementById("cfgBackendUrl").value = state.backendUrl || "";
+    document.getElementById("cfgApiKey").value = state.apiKey || "";
+    atualizarPushUI();
+    openOverlay("overlayConfig");
+  });
+
+  /* =========================================================
      EVENTOS: CONVERSA
      ========================================================= */
   document.getElementById("btnVoltar").addEventListener("click", mostrarLista);
@@ -2639,11 +2842,17 @@
   });
 
   /* =========================================================
-     VISIBILITY CHANGE
+     VISIBILITY CHANGE — v1.8.4 com reenvio de subscription
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
       atualizarBadge();
+
+      // v1.8.4: reenvia subscription ao voltar pro app
+      if(state.pushSubscription){
+        reenviarSubscription(state.pushSubscription);
+      }
+
       if(state.telefoneAtual){
         carregarConversa({ silencioso: true });
       } else {
@@ -2687,7 +2896,7 @@
   }
 
   /* =========================================================
-     BOOT
+     BOOT — v1.8.4
      ========================================================= */
   async function boot(){
     loadConfig();
@@ -2696,7 +2905,7 @@
     if("serviceWorker" in navigator){
       try{
         state.swRegistration = await registrarServiceWorker();
-        await verificarSubscriptionExistente();
+        await verificarErenovarSubscription();
       }catch(e){}
     }
 
