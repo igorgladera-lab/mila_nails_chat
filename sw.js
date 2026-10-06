@@ -1,21 +1,22 @@
 // =========================================================
 // Service Worker do Mila Whats
-// v1.8.3 — cache de mídia com limpeza automática
+// v1.8.5 — heartbeat silencioso + cache de mídia
 //
 // Responsabilidades:
 //   1. Receber notificações push e mostrar o banner
-//   2. Deep-link ao tocar na notificação
-//   3. Cache de mídia (imagens e áudios) do Supabase Storage
-//   4. Limpeza automática (40 MB / 24h / FIFO)
+//   2. Responder a heartbeat silencioso (POST /push/ack)
+//   3. Deep-link ao tocar na notificação
+//   4. Cache de mídia (imagens e áudios) do Supabase Storage
+//   5. Limpeza automática (40 MB / 24h / FIFO)
 // =========================================================
 
-const VERSAO_SW = "1.8.3";
+const VERSAO_SW = "1.8.5";
 const CACHE_MIDIA = "mila-media-" + VERSAO_SW;
 const CACHE_PWA = "mila-pwa-" + VERSAO_SW;
 
 const LIMITE_BYTES = 40 * 1024 * 1024; // 40 MB
 const EXPIRACAO_MS = 24 * 60 * 60 * 1000; // 24h
-const MAX_ITENS = 500; // trava de segurança
+const MAX_ITENS = 500;
 
 /* =========================================================
    INSTALL / ACTIVATE
@@ -27,7 +28,6 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
-      // Remove caches de versões antigas
       const keys = await caches.keys();
       await Promise.all(
         keys.map(k => {
@@ -38,10 +38,7 @@ self.addEventListener("activate", (event) => {
         })
       );
 
-      // Assume controle imediato
       await self.clients.claim();
-
-      // Limpeza em background
       limparCacheMidia().catch(() => {});
     })()
   );
@@ -52,8 +49,6 @@ self.addEventListener("activate", (event) => {
    ========================================================= */
 self.addEventListener("fetch", (event) => {
   const req = event.request;
-
-  // Só GET
   if(req.method !== "GET") return;
 
   let url;
@@ -63,19 +58,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 1) Mídia do Supabase Storage → cache-first
   if(ehMidiaStorage(url)){
     event.respondWith(cacheFirstMidia(req));
     return;
   }
 
-  // 2) Endpoint /media-url (backend do Render) → network-first
   if(ehEndpointMediaUrl(url)){
     event.respondWith(networkFirstMediaUrl(req));
     return;
   }
 
-  // 3) Assets do PWA (HTML, CSS, JS) → stale-while-revalidate
   if(ehAssetPWA(url)){
     event.respondWith(staleWhileRevalidate(req));
     return;
@@ -83,10 +75,9 @@ self.addEventListener("fetch", (event) => {
 });
 
 /* =========================================================
-   DETECÇÃO DE TIPO DE REQUISIÇÃO
+   DETECÇÃO DE TIPO
    ========================================================= */
 function ehMidiaStorage(url){
-  // Supabase Storage — URL assinada (signed) ou pública
   return (
     url.hostname.endsWith(".supabase.co") &&
     url.pathname.includes("/storage/")
@@ -94,25 +85,19 @@ function ehMidiaStorage(url){
 }
 
 function ehEndpointMediaUrl(url){
-  // Endpoint do backend que gera URL assinada
   return url.pathname.endsWith("/media-url");
 }
 
 function ehAssetPWA(url){
-  // Mesma origem do PWA
   if(url.origin !== self.location.origin) return false;
-  // Apenas GET de assets
   const ext = url.pathname.split(".").pop().toLowerCase();
   return ["html","css","js","png","jpg","jpeg","svg","ico","webp","json"].includes(ext);
 }
 
 /* =========================================================
-   ESTRATÉGIA: cache-first para mídia do Storage
+   ESTRATÉGIAS
    ========================================================= */
 async function cacheFirstMidia(request){
-  const urlOriginal = new URL(request.url);
-
-  // Normaliza URL removendo o token — chave estável para o cache
   const urlNormalizada = new URL(request.url);
   urlNormalizada.search = "";
   const chave = new Request(urlNormalizada.toString(), { method: "GET" });
@@ -121,23 +106,18 @@ async function cacheFirstMidia(request){
   const cached = await cache.match(chave);
 
   if(cached){
-    // Renova timestamp de uso (para limpeza FIFO)
     atualizarTimestampUso(chave.url).catch(() => {});
     return cached;
   }
 
-  // Não tem no cache — baixa da rede
   try{
     const resp = await fetch(request);
     if(resp.ok || resp.type === "opaque"){
-      // Clona antes de guardar (a resposta original será consumida)
       cache.put(chave, resp.clone()).catch(() => {});
-      // Salva timestamp para limpeza FIFO
       salvarTimestamp(chave.url).catch(() => {});
     }
     return resp;
   }catch(err){
-    // Se falhou a rede e não tem cache, retorna erro 504
     return new Response("Mídia indisponível offline", {
       status: 504,
       headers: { "Content-Type": "text/plain; charset=utf-8" }
@@ -145,10 +125,6 @@ async function cacheFirstMidia(request){
   }
 }
 
-/* =========================================================
-   ESTRATÉGIA: network-first para /media-url
-   (o token muda sempre — não cacheia a resposta)
-   ========================================================= */
 async function networkFirstMediaUrl(request){
   try{
     return await fetch(request);
@@ -160,9 +136,6 @@ async function networkFirstMediaUrl(request){
   }
 }
 
-/* =========================================================
-   ESTRATÉGIA: stale-while-revalidate para assets do PWA
-   ========================================================= */
 async function staleWhileRevalidate(request){
   const cache = await caches.open(CACHE_PWA);
   const cached = await cache.match(request);
@@ -180,8 +153,7 @@ async function staleWhileRevalidate(request){
 }
 
 /* =========================================================
-   TIMESTAMPS DE USO (para limpeza FIFO)
-   Chave: "mila_ts::<url>" no Cache Storage também
+   TIMESTAMPS DE USO (FIFO)
    ========================================================= */
 async function salvarTimestamp(url){
   try{
@@ -195,7 +167,6 @@ async function salvarTimestamp(url){
 }
 
 async function atualizarTimestampUso(url){
-  // Atualiza o timestamp para "agora" toda vez que a mídia é usada
   await salvarTimestamp(url);
 }
 
@@ -213,32 +184,25 @@ async function obterTimestamp(url){
 }
 
 /* =========================================================
-   LIMPEZA DO CACHE DE MÍDIA
-   Regras:
-     1. Remove entradas com mais de 24h sem uso
-     2. Se ainda passar de 40 MB → remove as mais antigas (FIFO)
-     3. Trava de segurança: máximo 500 itens
+   LIMPEZA DO CACHE
    ========================================================= */
 async function limparCacheMidia(){
   try{
     const cache = await caches.open(CACHE_MIDIA);
     const keys = await cache.keys();
 
-    // Separa mídias e timestamps
     const midias = [];
     const timestamps = new Map();
 
     for(const req of keys){
       const u = req.url;
       if(u.startsWith(self.location.origin + "/ts::") || u.includes("/ts::")){
-        // É um timestamp
         const originalUrl = u.split("ts::")[1];
         if(originalUrl){
           const ts = await obterTimestamp(originalUrl);
           timestamps.set(originalUrl, ts);
         }
       } else {
-        // É uma mídia de verdade
         midias.push(req);
       }
     }
@@ -248,7 +212,6 @@ async function limparCacheMidia(){
     let removidosFIFO = 0;
     let totalBytes = 0;
 
-    // 1) Remover expirados (> 24h sem uso)
     const sobreviventes = [];
     for(const req of midias){
       const ts = timestamps.get(req.url) || 0;
@@ -256,7 +219,6 @@ async function limparCacheMidia(){
 
       if(idade > EXPIRACAO_MS){
         await cache.delete(req).catch(() => {});
-        // Remove também o timestamp
         await cache.delete(new Request("ts::" + req.url)).catch(() => {});
         removidosExpirados++;
       } else {
@@ -264,7 +226,6 @@ async function limparCacheMidia(){
       }
     }
 
-    // 2) Calcular tamanho total dos sobreviventes
     for(const item of sobreviventes){
       try{
         const resp = await cache.match(item.req);
@@ -280,9 +241,7 @@ async function limparCacheMidia(){
       totalBytes += item.size;
     }
 
-    // 3) Se ainda passa do limite OU trava de segurança → remove FIFO
     if(totalBytes > LIMITE_BYTES || sobreviventes.length > MAX_ITENS){
-      // Ordena por timestamp crescente (mais antigas primeiro)
       sobreviventes.sort((a, b) => a.ts - b.ts);
 
       for(const item of sobreviventes){
@@ -309,45 +268,89 @@ async function limparCacheMidia(){
 }
 
 /* =========================================================
-   PUSH — recebe notificações
+   PUSH — recebe notificações (v1.8.5 com heartbeat)
    ========================================================= */
 self.addEventListener("push", (event) => {
-  let data = {
-    title: "Mila Whats",
-    body: "Nova mensagem recebida",
-    cliente: "",
-    telefone: "",
-    tipo: "text"
-  };
+  let data = {};
 
   try{
     if(event.data){
-      data = Object.assign(data, event.data.json());
+      data = event.data.json();
     }
   }catch(e){
     try{
       if(event.data){
-        data.body = event.data.text();
+        data = { body: event.data.text() };
       }
     }catch(e2){}
   }
 
+  /* ===== HEARTBEAT (push silencioso) ===== */
+  if(data.type === "heartbeat"){
+    // Não mostra notificação. Apenas confirma pro backend.
+    event.waitUntil(
+      (async () => {
+        try{
+          const backendUrl = data.backendUrl || "";
+          const apiKey = data.apiKey || "";
+          const endpoint = self.registration.scope || "";
+
+          if(!backendUrl){
+            console.warn("[sw] heartbeat sem backendUrl");
+            return;
+          }
+
+          const url = backendUrl.replace(/\/+$/, "") + "/push/ack";
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey
+            },
+            body: JSON.stringify({
+              endpoint: endpoint,
+              ts: data.ts || Date.now()
+            })
+          });
+
+          if(resp.ok){
+            console.log("[sw] heartbeat ack enviado");
+          } else {
+            console.warn("[sw] falha ao enviar ack:", resp.status);
+          }
+        }catch(err){
+          console.warn("[sw] erro no heartbeat ack:", err && err.message);
+        }
+      })()
+    );
+    return;
+  }
+
+  /* ===== PUSH NORMAL (notificação visível) ===== */
+  const payload = {
+    title: data.title || "Mila Whats",
+    body: data.body || "Nova mensagem recebida",
+    cliente: data.cliente || "",
+    telefone: data.telefone || "",
+    tipo: data.tipo || "text"
+  };
+
   const options = {
-    body: data.body,
+    body: payload.body,
     icon: "icon-192.png",
     badge: "icon-192.png",
-    tag: "mila-whats-msg-" + (data.telefone || "geral"),
+    tag: "mila-whats-msg-" + (payload.telefone || "geral"),
     renotify: true,
     data: {
-      cliente: data.cliente || "",
-      telefone: data.telefone || "",
-      tipo: data.tipo || "text",
+      cliente: payload.cliente,
+      telefone: payload.telefone,
+      tipo: payload.tipo,
       url: "./"
     }
   };
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Mila Whats", options)
+    self.registration.showNotification(payload.title, options)
   );
 });
 
@@ -388,14 +391,14 @@ self.addEventListener("notificationclick", (event) => {
 });
 
 /* =========================================================
-   FECHAMENTO DE NOTIFICAÇÃO (informativo)
+   NOTIFICATIONCLOSE
    ========================================================= */
 self.addEventListener("notificationclose", (event) => {
   console.log("[sw] notificação fechada sem clique");
 });
 
 /* =========================================================
-   MENSAGENS DO CLIENTE (do index.html)
+   MENSAGENS DO CLIENTE
    ========================================================= */
 self.addEventListener("message", (event) => {
   const data = event.data || {};
