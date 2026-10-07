@@ -1,21 +1,14 @@
 // =========================================================
 // Service Worker do Mila Whats
-// v1.8.5 — heartbeat silencioso + cache de mídia
-//
-// Responsabilidades:
-//   1. Receber notificações push e mostrar o banner
-//   2. Responder a heartbeat silencioso (POST /push/ack)
-//   3. Deep-link ao tocar na notificação
-//   4. Cache de mídia (imagens e áudios) do Supabase Storage
-//   5. Limpeza automática (40 MB / 24h / FIFO)
+// v1.8.5.1 — heartbeat com endpoint correto + cache de mídia
 // =========================================================
 
-const VERSAO_SW = "1.8.5";
+const VERSAO_SW = "1.8.5.1";
 const CACHE_MIDIA = "mila-media-" + VERSAO_SW;
 const CACHE_PWA = "mila-pwa-" + VERSAO_SW;
 
-const LIMITE_BYTES = 40 * 1024 * 1024; // 40 MB
-const EXPIRACAO_MS = 24 * 60 * 60 * 1000; // 24h
+const LIMITE_BYTES = 40 * 1024 * 1024;
+const EXPIRACAO_MS = 24 * 60 * 60 * 1000;
 const MAX_ITENS = 500;
 
 /* =========================================================
@@ -45,7 +38,7 @@ self.addEventListener("activate", (event) => {
 });
 
 /* =========================================================
-   FETCH — intercepta requisições
+   FETCH
    ========================================================= */
 self.addEventListener("fetch", (event) => {
   const req = event.request;
@@ -54,40 +47,28 @@ self.addEventListener("fetch", (event) => {
   let url;
   try{
     url = new URL(req.url);
-  }catch(e){
-    return;
-  }
+  }catch(e){ return; }
 
   if(ehMidiaStorage(url)){
     event.respondWith(cacheFirstMidia(req));
     return;
   }
-
   if(ehEndpointMediaUrl(url)){
     event.respondWith(networkFirstMediaUrl(req));
     return;
   }
-
   if(ehAssetPWA(url)){
     event.respondWith(staleWhileRevalidate(req));
     return;
   }
 });
 
-/* =========================================================
-   DETECÇÃO DE TIPO
-   ========================================================= */
 function ehMidiaStorage(url){
-  return (
-    url.hostname.endsWith(".supabase.co") &&
-    url.pathname.includes("/storage/")
-  );
+  return url.hostname.endsWith(".supabase.co") && url.pathname.includes("/storage/");
 }
-
 function ehEndpointMediaUrl(url){
   return url.pathname.endsWith("/media-url");
 }
-
 function ehAssetPWA(url){
   if(url.origin !== self.location.origin) return false;
   const ext = url.pathname.split(".").pop().toLowerCase();
@@ -98,9 +79,9 @@ function ehAssetPWA(url){
    ESTRATÉGIAS
    ========================================================= */
 async function cacheFirstMidia(request){
-  const urlNormalizada = new URL(request.url);
-  urlNormalizada.search = "";
-  const chave = new Request(urlNormalizada.toString(), { method: "GET" });
+  const urlNorm = new URL(request.url);
+  urlNorm.search = "";
+  const chave = new Request(urlNorm.toString(), { method: "GET" });
 
   const cache = await caches.open(CACHE_MIDIA);
   const cached = await cache.match(chave);
@@ -153,7 +134,7 @@ async function staleWhileRevalidate(request){
 }
 
 /* =========================================================
-   TIMESTAMPS DE USO (FIFO)
+   TIMESTAMPS (FIFO)
    ========================================================= */
 async function salvarTimestamp(url){
   try{
@@ -165,11 +146,7 @@ async function salvarTimestamp(url){
     await cache.put(req, resp);
   }catch(e){}
 }
-
-async function atualizarTimestampUso(url){
-  await salvarTimestamp(url);
-}
-
+async function atualizarTimestampUso(url){ await salvarTimestamp(url); }
 async function obterTimestamp(url){
   try{
     const cache = await caches.open(CACHE_MIDIA);
@@ -178,9 +155,7 @@ async function obterTimestamp(url){
     if(!resp) return 0;
     const txt = await resp.text();
     return parseInt(txt, 10) || 0;
-  }catch(e){
-    return 0;
-  }
+  }catch(e){ return 0; }
 }
 
 /* =========================================================
@@ -235,15 +210,12 @@ async function limparCacheMidia(){
         } else {
           item.size = 0;
         }
-      }catch(e){
-        item.size = 0;
-      }
+      }catch(e){ item.size = 0; }
       totalBytes += item.size;
     }
 
     if(totalBytes > LIMITE_BYTES || sobreviventes.length > MAX_ITENS){
       sobreviventes.sort((a, b) => a.ts - b.ts);
-
       for(const item of sobreviventes){
         if(totalBytes <= LIMITE_BYTES * 0.8 && sobreviventes.length <= MAX_ITENS){
           break;
@@ -259,8 +231,7 @@ async function limparCacheMidia(){
       "[sw] limpeza:",
       removidosExpirados, "expirados,",
       removidosFIFO, "FIFO,",
-      "total:", Math.round(totalBytes / 1024), "KB",
-      "em", sobreviventes.length, "itens"
+      "total:", Math.round(totalBytes / 1024), "KB"
     );
   }catch(err){
     console.warn("[sw] erro na limpeza:", err && err.message);
@@ -268,35 +239,37 @@ async function limparCacheMidia(){
 }
 
 /* =========================================================
-   PUSH — recebe notificações (v1.8.5 com heartbeat)
+   PUSH — recebe notificações (v1.8.5.1)
    ========================================================= */
 self.addEventListener("push", (event) => {
   let data = {};
 
   try{
-    if(event.data){
-      data = event.data.json();
-    }
+    if(event.data){ data = event.data.json(); }
   }catch(e){
     try{
-      if(event.data){
-        data = { body: event.data.text() };
-      }
+      if(event.data){ data = { body: event.data.text() }; }
     }catch(e2){}
   }
 
   /* ===== HEARTBEAT (push silencioso) ===== */
   if(data.type === "heartbeat"){
-    // Não mostra notificação. Apenas confirma pro backend.
     event.waitUntil(
       (async () => {
         try{
+          // ✅ CORREÇÃO: pega o ENDPOINT REAL da subscription
+          const sub = await self.registration.pushManager.getSubscription();
+          if(!sub){
+            console.warn("[sw] heartbeat sem subscription ativa — impossível enviar ack");
+            return;
+          }
+
+          const endpoint = sub.endpoint;  // "https://fcm.googleapis.com/fcm/send/..."
           const backendUrl = data.backendUrl || "";
           const apiKey = data.apiKey || "";
-          const endpoint = self.registration.scope || "";
 
           if(!backendUrl){
-            console.warn("[sw] heartbeat sem backendUrl");
+            console.warn("[sw] heartbeat sem backendUrl no payload");
             return;
           }
 
@@ -308,13 +281,13 @@ self.addEventListener("push", (event) => {
               "x-api-key": apiKey
             },
             body: JSON.stringify({
-              endpoint: endpoint,
+              endpoint: endpoint,        // ✅ URL real do FCM
               ts: data.ts || Date.now()
             })
           });
 
           if(resp.ok){
-            console.log("[sw] heartbeat ack enviado");
+            console.log("[sw] heartbeat ack enviado para", endpoint.slice(0, 60) + "...");
           } else {
             console.warn("[sw] falha ao enviar ack:", resp.status);
           }
@@ -326,7 +299,7 @@ self.addEventListener("push", (event) => {
     return;
   }
 
-  /* ===== PUSH NORMAL (notificação visível) ===== */
+  /* ===== PUSH NORMAL ===== */
   const payload = {
     title: data.title || "Mila Whats",
     body: data.body || "Nova mensagem recebida",
@@ -355,7 +328,7 @@ self.addEventListener("push", (event) => {
 });
 
 /* =========================================================
-   CLIQUE NA NOTIFICAÇÃO — deep-link
+   CLIQUE NA NOTIFICAÇÃO
    ========================================================= */
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
@@ -390,9 +363,6 @@ self.addEventListener("notificationclick", (event) => {
   );
 });
 
-/* =========================================================
-   NOTIFICATIONCLOSE
-   ========================================================= */
 self.addEventListener("notificationclose", (event) => {
   console.log("[sw] notificação fechada sem clique");
 });

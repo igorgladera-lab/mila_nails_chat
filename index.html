@@ -952,6 +952,17 @@
     cursor:not-allowed;
   }
 
+  .push-bloco .push-btn.secundario{
+    margin-top:8px;
+    background:var(--btn-bg);
+    color:var(--text);
+    font-weight:600;
+  }
+
+  .push-bloco .push-btn.secundario:active{
+    background:var(--btn-active);
+  }
+
   .btn{
     border:none;
     border-radius:8px;
@@ -991,6 +1002,7 @@
     display:block;
   }
 
+  /* ====== BANNER DE AVISO (push revogado) ====== */
   .aviso-push{
     position:fixed;
     left:0;
@@ -1169,6 +1181,7 @@
         <div class="push-titulo">🔔 Notificações push</div>
         <div class="push-status" id="pushStatus">Verificando...</div>
         <button class="push-btn" id="btnAtivarPush" disabled>Ativar notificações</button>
+        <button class="push-btn secundario" id="btnRenovarPush" type="button">🔄 Renovar push</button>
       </div>
 
     </div>
@@ -1206,6 +1219,7 @@
   const LS_CONFIG = "mila_whats_config";
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
+  const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000; // 5 minutos
 
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
@@ -1239,6 +1253,8 @@
     pushSubscription: null,
     pushSuportado: false,
     pushAtivo: false,
+    ultimaVerificacaoPush: 0,
+    ultimaRenovacaoPush: 0,
 
     imagemPendente: null,
 
@@ -1249,10 +1265,7 @@
     timerGravacao: null,
     streamAudio: null,
 
-    audioPlayerAtivo: null,
-
-    // v1.9: controle de navegação pelo histórico
-    navegacaoInterna: false
+    audioPlayerAtivo: null
   };
 
   /* =========================================================
@@ -1534,8 +1547,9 @@
   }
 
   /* =========================================================
-     PUSH — renovação silenciosa
+     PUSH — renovação silenciosa (v1.8.5.1)
      ========================================================= */
+
   async function reenviarSubscription(sub){
     if(!sub || !temConfig()) return;
     try{
@@ -1555,18 +1569,40 @@
     }
   }
 
-  async function verificarErenovarSubscription(){
-    if(!state.swRegistration) return;
-
-    const permissao = ("Notification" in window) ? Notification.permission : "default";
-    let sub = null;
+  async function obterSubscriptionComRetry(){
+    if(!state.swRegistration) return null;
 
     try{
-      sub = await state.swRegistration.pushManager.getSubscription();
-    }catch(e){
-      sub = null;
-    }
+      let sub = await state.swRegistration.pushManager.getSubscription();
+      if(sub) return sub;
 
+      // FCM/Chrome às vezes precisa de tempo para sincronizar
+      await new Promise(r => setTimeout(r, 2000));
+      sub = await state.swRegistration.pushManager.getSubscription();
+      return sub;
+    }catch(e){
+      return null;
+    }
+  }
+
+  async function verificarErenovarSubscription(opts){
+    opts = opts || {};
+    const forcar = !!opts.forcar;
+
+    if(!state.swRegistration) return;
+
+    // Debounce: evita rodar mais de 1x a cada 5 min (a menos que seja forçado)
+    const agora = Date.now();
+    if(!forcar && state.ultimaVerificacaoPush && (agora - state.ultimaVerificacaoPush) < INTERVALO_DEBOUNCE_PUSH){
+      return;
+    }
+    state.ultimaVerificacaoPush = agora;
+
+    const permissao = ("Notification" in window) ? Notification.permission : "default";
+
+    const sub = await obterSubscriptionComRetry();
+
+    // CASO 1: subscription existe → reenvia pro backend
     if(sub){
       state.pushSubscription = sub;
       state.pushAtivo = true;
@@ -1575,6 +1611,8 @@
       return;
     }
 
+    // CASO 2: subscription sumiu, mas permissão foi concedida
+    //         → rerecreve silenciosamente
     if(permissao === "granted" && temConfig()){
       try{
         const novaSub = await state.swRegistration.pushManager.subscribe({
@@ -1583,6 +1621,7 @@
         });
         state.pushSubscription = novaSub;
         state.pushAtivo = true;
+        state.ultimaRenovacaoPush = agora;
         await reenviarSubscription(novaSub);
         console.log("[push] subscription renovada silenciosamente");
         esconderAvisoPush();
@@ -1593,9 +1632,71 @@
       return;
     }
 
+    // CASO 3: permissão revogada pelo sistema → mostra banner
     state.pushAtivo = false;
     if(permissao === "denied"){
       mostrarAvisoPush();
+    }
+  }
+
+  /**
+   * Força uma renovação manual (usado pelo botão de debug).
+   */
+  async function renovarPushManual(){
+    if(!temConfig()){
+      alert("Configure a URL e a API Key primeiro.");
+      return;
+    }
+    if(!state.swRegistration){
+      alert("Service Worker ainda não registrado. Recarregue o app.");
+      return;
+    }
+
+    const permissao = ("Notification" in window) ? Notification.permission : "default";
+    if(permissao !== "granted"){
+      const novaPermissao = await Notification.requestPermission();
+      if(novaPermissao !== "granted"){
+        alert("Permissão negada. Ative nas configurações do navegador.");
+        return;
+      }
+    }
+
+    try{
+      // Remove a subscription atual (se existir)
+      const subAtual = await state.swRegistration.pushManager.getSubscription();
+      if(subAtual){
+        try{
+          await fetch(urlBase("/unsubscribe"), {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": state.apiKey
+            },
+            body: JSON.stringify({ endpoint: subAtual.endpoint })
+          });
+        }catch(e){}
+        await subAtual.unsubscribe();
+        state.pushSubscription = null;
+      }
+
+      // Cria uma nova
+      const novaSub = await state.swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+
+      state.pushSubscription = novaSub;
+      state.pushAtivo = true;
+      state.ultimaRenovacaoPush = Date.now();
+
+      await reenviarSubscription(novaSub);
+      atualizarPushUI();
+
+      alert("✅ Push renovado com sucesso!\n\nNovo endpoint registrado no backend.");
+      console.log("[push] renovação manual concluída:", novaSub.endpoint.slice(0, 60) + "...");
+    }catch(err){
+      console.error("[push] erro na renovação manual:", err);
+      alert("Erro ao renovar: " + err.message);
     }
   }
 
@@ -1718,6 +1819,12 @@
     else ativarPush();
   });
 
+  document.getElementById("btnRenovarPush").addEventListener("click", () => {
+    if(confirm("Isso vai remover a subscription atual e criar uma nova.\n\nConfirmar?")){
+      renovarPushManual();
+    }
+  });
+
   /* =========================================================
      OVERLAYS
      ========================================================= */
@@ -1765,11 +1872,7 @@
     }, INTERVALO_REFRESH_CONVERSA);
   }
 
-  /**
-   * v1.9: mostraLista aceita um parâmetro para saber se foi
-   * navegação vinda do botão voltar do celular (não empilha estado).
-   */
-  function mostrarLista(fromPopState){
+  function mostrarLista(){
     document.getElementById("telaConversa").style.display = "none";
     document.getElementById("telaLista").style.display = "block";
     state.telefoneAtual = null;
@@ -1780,23 +1883,8 @@
     iniciarRefreshLista();
 
     carregarConversas();
-
-    // v1.9: se NÃO veio do botão voltar (popstate),
-    // empurra um estado "lista" para o histórico.
-    // Assim o botão voltar na lista fecha o app.
-    if(!fromPopState){
-      // Remove a hash "conversa" se estiver presente
-      if(window.location.hash === "#conversa"){
-        try{
-          history.replaceState({ tela: "lista" }, "", window.location.pathname);
-        }catch(e){}
-      }
-    }
   }
 
-  /**
-   * v1.9: mostraConversa agora empurra um estado no histórico.
-   */
   function mostrarConversa(telefone, nome){
     document.getElementById("telaLista").style.display = "none";
     document.getElementById("telaConversa").style.display = "block";
@@ -1813,15 +1901,6 @@
 
     pararRefreshLista();
     iniciarRefreshConversa();
-
-    // v1.9: empurra estado no histórico para o botão voltar funcionar
-    try{
-      history.pushState(
-        { tela: "conversa", telefone: telefone, cliente: nomeFinal },
-        "",
-        "#conversa"
-      );
-    }catch(e){}
   }
 
   async function marcarComoLida(telefone){
@@ -1840,17 +1919,6 @@
       atualizarBadge();
     }catch(e){}
   }
-
-  /* =========================================================
-     v1.9: POPSTATE — botão voltar do celular
-     ========================================================= */
-  window.addEventListener("popstate", (event) => {
-    // Se está numa conversa, volta para a lista
-    if(state.telefoneAtual){
-      mostrarLista(true);
-    }
-    // Se já está na lista, deixa o navegador fechar o app naturalmente
-  });
 
   /* =========================================================
      RENDER: LISTA
@@ -2836,15 +2904,7 @@
   /* =========================================================
      EVENTOS: CONVERSA
      ========================================================= */
-  document.getElementById("btnVoltar").addEventListener("click", () => {
-    // v1.9: usa history.back() para acionar o popstate
-    // Se por algum motivo não houver estado no histórico, cai no fallback
-    if(window.history.length > 1 && state.telefoneAtual){
-      window.history.back();
-    } else {
-      mostrarLista(true);
-    }
-  });
+  document.getElementById("btnVoltar").addEventListener("click", mostrarLista);
 
   document.getElementById("btnReloadConversa").addEventListener("click", () => {
     carregarConversa();
@@ -2875,6 +2935,7 @@
     if(document.visibilityState === "visible" && temConfig()){
       atualizarBadge();
 
+      // Reenvia subscription ao voltar pro app (com debounce de 5 min)
       if(state.pushSubscription){
         reenviarSubscription(state.pushSubscription);
       }
@@ -2928,15 +2989,10 @@
     loadConfig();
     renderLista();
 
-    // v1.9: substitui qualquer estado inicial no histórico por "lista"
-    try{
-      history.replaceState({ tela: "lista" }, "", window.location.pathname);
-    }catch(e){}
-
     if("serviceWorker" in navigator){
       try{
         state.swRegistration = await registrarServiceWorker();
-        await verificarErenovarSubscription();
+        await verificarErenovarSubscription({ forcar: true });
       }catch(e){}
     }
 
