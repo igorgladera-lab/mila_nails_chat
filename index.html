@@ -1255,6 +1255,8 @@
     pushAtivo: false,
     ultimaVerificacaoPush: 0,
     ultimaRenovacaoPush: 0,
+    deviceId: "",
+
 
     imagemPendente: null,
 
@@ -1278,8 +1280,19 @@
         state.backendUrl = typeof raw.backendUrl === "string" ? raw.backendUrl : "";
         state.apiKey     = typeof raw.apiKey === "string" ? raw.apiKey : "";
       }
+
+      // Carrega ou gera deviceId único
+      const DEVICE_ID_KEY = "mila_whats_device_id";
+      let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+      if(!deviceId){
+        deviceId = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 12);
+        localStorage.setItem(DEVICE_ID_KEY, deviceId);
+        console.log("[device] deviceId gerado:", deviceId);
+      }
+      state.deviceId = deviceId;
     }catch(e){}
   }
+
 
   function saveConfig(){
     localStorage.setItem(LS_CONFIG, JSON.stringify({
@@ -1559,7 +1572,10 @@
           "Content-Type": "application/json",
           "x-api-key": state.apiKey
         },
-        body: JSON.stringify({ subscription: sub })
+        body: JSON.stringify({
+          subscription: sub,
+          deviceId: state.deviceId
+        })
       });
       if(!resp.ok){
         console.warn("[push] falha ao reenviar subscription:", resp.status);
@@ -1568,6 +1584,7 @@
       console.warn("[push] erro ao reenviar subscription:", e.message);
     }
   }
+
 
   async function obterSubscriptionComRetry(){
     if(!state.swRegistration) return null;
@@ -1793,7 +1810,10 @@
           "Content-Type": "application/json",
           "x-api-key": state.apiKey
         },
-        body: JSON.stringify({ subscription: sub })
+        body: JSON.stringify({
+          subscription: sub,
+          deviceId: state.deviceId
+        })
       });
 
       if(!resp.ok){
