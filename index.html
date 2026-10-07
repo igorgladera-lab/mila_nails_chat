@@ -1643,43 +1643,52 @@
    * Força uma renovação manual (usado pelo botão de debug).
    */
   async function renovarPushManual(){
-    if(!temConfig()){
-      alert("Configure a URL e a API Key primeiro.");
+  if(!temConfig()){
+    alert("Configure a URL e a API Key primeiro.");
+    return;
+  }
+  if(!state.swRegistration){
+    alert("Service Worker ainda não registrado. Recarregue o app.");
+    return;
+  }
+
+  const permissao = ("Notification" in window) ? Notification.permission : "default";
+  if(permissao !== "granted"){
+    const novaPermissao = await Notification.requestPermission();
+    if(novaPermissao !== "granted"){
+      alert("Permissão negada. Ative nas configurações do navegador.");
       return;
     }
-    if(!state.swRegistration){
-      alert("Service Worker ainda não registrado. Recarregue o app.");
+  }
+
+  // Se já existe uma subscription, apenas reenvia e retorna
+  try{
+    const subExistente = await state.swRegistration.pushManager.getSubscription();
+    if(subExistente){
+      state.pushSubscription = subExistente;
+      state.pushAtivo = true;
+      await reenviarSubscription(subExistente);
+      atualizarPushUI();
+      alert("✅ Push já estava ativo. Reenviei a subscription para o backend.\n\nEndpoint: " +
+            subExistente.endpoint.slice(0, 60) + "...");
+      console.log("[push] subscription reenviada:", subExistente.endpoint.slice(0, 60) + "...");
       return;
     }
+  }catch(e){}
 
-    const permissao = ("Notification" in window) ? Notification.permission : "default";
-    if(permissao !== "granted"){
-      const novaPermissao = await Notification.requestPermission();
-      if(novaPermissao !== "granted"){
-        alert("Permissão negada. Ative nas configurações do navegador.");
-        return;
-      }
-    }
+  // Se NÃO existe, cria uma nova com retry
+  let ultimoErro = null;
 
+  for(let tentativa = 1; tentativa <= 3; tentativa++){
     try{
-      // Remove a subscription atual (se existir)
-      const subAtual = await state.swRegistration.pushManager.getSubscription();
-      if(subAtual){
-        try{
-          await fetch(urlBase("/unsubscribe"), {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": state.apiKey
-            },
-            body: JSON.stringify({ endpoint: subAtual.endpoint })
-          });
-        }catch(e){}
-        await subAtual.unsubscribe();
-        state.pushSubscription = null;
+      // Antes de tentar de novo, aguarda um tempo crescente
+      if(tentativa > 1){
+        const delay = tentativa * 3000; // 3s, 6s
+        console.log("[push] aguardando", delay, "ms antes da tentativa", tentativa);
+        await new Promise(r => setTimeout(r, delay));
       }
 
-      // Cria uma nova
+      // Tenta criar a subscription
       const novaSub = await state.swRegistration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -1692,13 +1701,38 @@
       await reenviarSubscription(novaSub);
       atualizarPushUI();
 
-      alert("✅ Push renovado com sucesso!\n\nNovo endpoint registrado no backend.");
+      alert("✅ Push renovado com sucesso!\n\nEndpoint: " +
+            novaSub.endpoint.slice(0, 60) + "...");
       console.log("[push] renovação manual concluída:", novaSub.endpoint.slice(0, 60) + "...");
+      return;
+
     }catch(err){
-      console.error("[push] erro na renovação manual:", err);
-      alert("Erro ao renovar: " + err.message);
+      ultimoErro = err;
+      console.warn("[push] tentativa", tentativa, "falhou:", err.message);
+
+      // Se for erro diferente de "push service error", para o loop
+      if(err.message && !err.message.includes("push service error")){
+        break;
+      }
     }
   }
+
+  // Se chegou aqui, todas as tentativas falharam
+  console.error("[push] renovação falhou após 3 tentativas:", ultimoErro);
+
+  let mensagem = "Não foi possível renovar o push.\n\n";
+
+  if(ultimoErro && ultimoErro.message && ultimoErro.message.includes("push service error")){
+    mensagem += "O FCM (serviço de push do Google) recusou a solicitação. Isso geralmente acontece quando:\n\n" +
+                "1. Você tentou renovar muitas vezes em pouco tempo (rate limit)\n" +
+                "2. A subscription anterior ainda está sendo liberada\n\n" +
+                "Aguarde 15-30 minutos e tente novamente.";
+  } else {
+    mensagem += "Erro: " + (ultimoErro ? ultimoErro.message : "desconhecido");
+  }
+
+  alert(mensagem);
+}
 
   function mostrarAvisoPush(){
     const el1 = document.getElementById("avisoPush");
