@@ -1414,6 +1414,7 @@
     if(tipo === "image") return "📷 Foto" + (txt && txt !== "[Imagem]" ? ": " + txt : "");
     if(tipo === "audio") return "🎤 Áudio";
     if(tipo === "voice") return "🎤 Mensagem de voz";
+    if(tipo === "template") return formatarTextoTemplate(txt) || txt;
     return txt;
   }
 
@@ -2271,6 +2272,29 @@
         </div>
       </div>
     `;
+  }
+
+  /**
+   * Converte o texto cru do Supabase (ex: "[Template: confirmao_agendamento]
+   * Serviço em 08/10/2026 às 11:30") em um texto amigável e legível
+   * para o chat, próximo ao que a cliente vê.
+   */
+  function formatarTextoTemplate(txt){
+    if(!txt || typeof txt !== "string") return "";
+
+    // Caso 1: já está no formato bonito (começa com "Olá,")
+    if(txt.trim().startsWith("Olá,")){
+      return txt;
+    }
+
+    // Caso 2: formato cru "[Template: nome_do_template] corpo..."
+    const match = txt.match(/^\[Template:\s*[^\]]+\]\s*(.+)$/i);
+    if(match && match[1]){
+      return match[1].trim();
+    }
+
+    // Caso 3: fallback — devolve o texto original
+    return txt;
   }
 
   function gerarBarrasOnda(seed){
