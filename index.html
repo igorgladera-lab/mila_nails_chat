@@ -2255,11 +2255,15 @@
       `;
     }
 
-    /* ---------- TEXTO ---------- */
+    /* ---------- TEXTO / TEMPLATE ---------- */
+    const textoExibido = (tipo === "template")
+      ? formatarTextoTemplate(m.conteudo || "")
+      : (m.conteudo || "");
+
     return `
       <div class="chat-msg ${classe}" data-msg-id="${escapeHtml(m.id || "")}">
         <div class="chat-bubble${erro}">
-          <div class="texto">${escapeHtml(m.conteudo || "")}</div>
+          <div class="texto">${escapeHtml(textoExibido)}</div>
           <div class="meta">
             <span>${escapeHtml(hora)}</span>
             ${statusIcon ? `<span class="status">${statusIcon}</span>` : ""}
