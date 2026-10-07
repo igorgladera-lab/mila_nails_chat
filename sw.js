@@ -1,9 +1,10 @@
 // =========================================================
 // Service Worker do Mila Whats
-// v1.8.5.1 — heartbeat com endpoint correto + cache de mídia
+// v1.9.0 — heartbeat com endpoint correto + cache de mídia
+// + deep-link alinhado com #conversa= (pushState do index)
 // =========================================================
 
-const VERSAO_SW = "1.8.5.1";
+const VERSAO_SW = "1.9.0";
 const CACHE_MIDIA = "mila-media-" + VERSAO_SW;
 const CACHE_PWA = "mila-pwa-" + VERSAO_SW;
 
@@ -239,7 +240,7 @@ async function limparCacheMidia(){
 }
 
 /* =========================================================
-   PUSH — recebe notificações (v1.8.5.1)
+   PUSH — recebe notificações
    ========================================================= */
 self.addEventListener("push", (event) => {
   let data = {};
@@ -257,14 +258,13 @@ self.addEventListener("push", (event) => {
     event.waitUntil(
       (async () => {
         try{
-          // ✅ CORREÇÃO: pega o ENDPOINT REAL da subscription
           const sub = await self.registration.pushManager.getSubscription();
           if(!sub){
             console.warn("[sw] heartbeat sem subscription ativa — impossível enviar ack");
             return;
           }
 
-          const endpoint = sub.endpoint;  // "https://fcm.googleapis.com/fcm/send/..."
+          const endpoint = sub.endpoint;
           const backendUrl = data.backendUrl || "";
           const apiKey = data.apiKey || "";
 
@@ -281,7 +281,7 @@ self.addEventListener("push", (event) => {
               "x-api-key": apiKey
             },
             body: JSON.stringify({
-              endpoint: endpoint,        // ✅ URL real do FCM
+              endpoint: endpoint,
               ts: data.ts || Date.now()
             })
           });
@@ -336,10 +336,10 @@ self.addEventListener("notificationclick", (event) => {
   const tel = (event.notification.data && event.notification.data.telefone) || "";
   const cliente = (event.notification.data && event.notification.data.cliente) || "";
 
-  const params = new URLSearchParams();
-  if(tel) params.set("tel", tel);
-  if(cliente) params.set("cliente", cliente);
-  const urlAbrir = "./" + (params.toString() ? "?" + params.toString() : "");
+  // ✅ Deep-link agora usa #conversa= (mesmo padrão do index.html / pushState)
+  const urlAbrir = tel
+    ? "./#conversa=" + encodeURIComponent(tel)
+    : "./";
 
   event.waitUntil(
     self.clients
@@ -347,6 +347,7 @@ self.addEventListener("notificationclick", (event) => {
       .then(clientsArr => {
         for(const c of clientsArr){
           if(c.url.includes("mila_nails_chat")){
+            // ✅ Envia mensagem estruturada; index decide se empilha ou não
             c.postMessage({
               type: "abrirConversa",
               telefone: tel,

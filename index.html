@@ -887,7 +887,8 @@
     border-radius:8px;
   }
 
-  .push-bloco{
+  .push-bloco,
+  .backup-bloco{
     border:1px solid var(--border);
     border-radius:10px;
     padding:14px;
@@ -895,7 +896,8 @@
     background:var(--input-bg-alt);
   }
 
-  .push-bloco .push-titulo{
+  .push-bloco .push-titulo,
+  .backup-bloco .backup-titulo{
     font-size:13px;
     font-weight:700;
     color:var(--text);
@@ -903,6 +905,13 @@
     display:flex;
     align-items:center;
     gap:6px;
+  }
+
+  .backup-bloco .backup-sub{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.4;
+    margin-bottom:12px;
   }
 
   .push-bloco .push-status{
@@ -930,7 +939,8 @@
     font-weight:600;
   }
 
-  .push-bloco .push-btn{
+  .push-bloco .push-btn,
+  .backup-bloco .backup-btn{
     width:100%;
     background:var(--primary);
     color:#fff;
@@ -941,9 +951,11 @@
     font-weight:600;
     cursor:pointer;
     transition:background .15s, opacity .15s;
+    margin-bottom:8px;
   }
 
-  .push-bloco .push-btn:active{
+  .push-bloco .push-btn:active,
+  .backup-bloco .backup-btn:active{
     background:var(--primary-dark);
   }
 
@@ -952,14 +964,16 @@
     cursor:not-allowed;
   }
 
-  .push-bloco .push-btn.secundario{
-    margin-top:8px;
+  .push-bloco .push-btn.secundario,
+  .backup-bloco .backup-btn.secundario{
     background:var(--btn-bg);
     color:var(--text);
     font-weight:600;
+    margin-bottom:0;
   }
 
-  .push-bloco .push-btn.secundario:active{
+  .push-bloco .push-btn.secundario:active,
+  .backup-bloco .backup-btn.secundario:active{
     background:var(--btn-active);
   }
 
@@ -1002,7 +1016,6 @@
     display:block;
   }
 
-  /* ====== BANNER DE AVISO (push revogado) ====== */
   .aviso-push{
     position:fixed;
     left:0;
@@ -1184,6 +1197,14 @@
         <button class="push-btn secundario" id="btnRenovarPush" type="button">🔄 Renovar push</button>
       </div>
 
+      <div class="backup-bloco">
+        <div class="backup-titulo">💾 Backup</div>
+        <div class="backup-sub">Salve a configuração do app em um arquivo. As conversas ficam seguras na nuvem.</div>
+        <button class="backup-btn" id="btnExportarBackup" type="button">📤 Fazer backup</button>
+        <button class="backup-btn secundario" id="btnImportarBackup" type="button">📥 Importar backup</button>
+        <input type="file" id="inputImportBackup" accept="application/json,.json" style="display:none">
+      </div>
+
     </div>
     <div class="sheet-footer">
       <button class="btn btn-secondary" data-close="overlayConfig">Cancelar</button>
@@ -1219,7 +1240,7 @@
   const LS_CONFIG = "mila_whats_config";
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
-  const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000; // 5 minutos
+  const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000;
 
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
@@ -1257,7 +1278,6 @@
     ultimaRenovacaoPush: 0,
     deviceId: "",
 
-
     imagemPendente: null,
 
     gravando: false,
@@ -1281,7 +1301,6 @@
         state.apiKey     = typeof raw.apiKey === "string" ? raw.apiKey : "";
       }
 
-      // Carrega ou gera deviceId único
       const DEVICE_ID_KEY = "mila_whats_device_id";
       let deviceId = localStorage.getItem(DEVICE_ID_KEY);
       if(!deviceId){
@@ -1292,7 +1311,6 @@
       state.deviceId = deviceId;
     }catch(e){}
   }
-
 
   function saveConfig(){
     localStorage.setItem(LS_CONFIG, JSON.stringify({
@@ -1406,6 +1424,14 @@
     if(!n || n <= 0) return "";
     if(n > 99) return "99+";
     return String(n);
+  }
+
+  function formatarTextoTemplate(txt){
+    if(!txt || typeof txt !== "string") return "";
+    if(txt.trim().startsWith("Olá,")) return txt;
+    const match = txt.match(/^\[Template:\s*[^\]]+\]\s*(.+)$/i);
+    if(match && match[1]) return match[1].trim();
+    return txt;
   }
 
   function previewUltima(c){
@@ -1560,10 +1586,6 @@
     btnEl.textContent = "Ativar notificações";
   }
 
-  /* =========================================================
-     PUSH — renovação silenciosa (v1.8.5.1)
-     ========================================================= */
-
   async function reenviarSubscription(sub){
     if(!sub || !temConfig()) return;
     try{
@@ -1586,7 +1608,6 @@
     }
   }
 
-
   async function obterSubscriptionComRetry(){
     if(!state.swRegistration) return null;
 
@@ -1594,7 +1615,6 @@
       let sub = await state.swRegistration.pushManager.getSubscription();
       if(sub) return sub;
 
-      // FCM/Chrome às vezes precisa de tempo para sincronizar
       await new Promise(r => setTimeout(r, 2000));
       sub = await state.swRegistration.pushManager.getSubscription();
       return sub;
@@ -1609,7 +1629,6 @@
 
     if(!state.swRegistration) return;
 
-    // Debounce: evita rodar mais de 1x a cada 5 min (a menos que seja forçado)
     const agora = Date.now();
     if(!forcar && state.ultimaVerificacaoPush && (agora - state.ultimaVerificacaoPush) < INTERVALO_DEBOUNCE_PUSH){
       return;
@@ -1620,7 +1639,6 @@
 
     const sub = await obterSubscriptionComRetry();
 
-    // CASO 1: subscription existe → reenvia pro backend
     if(sub){
       state.pushSubscription = sub;
       state.pushAtivo = true;
@@ -1629,8 +1647,6 @@
       return;
     }
 
-    // CASO 2: subscription sumiu, mas permissão foi concedida
-    //         → rerecreve silenciosamente
     if(permissao === "granted" && temConfig()){
       try{
         const novaSub = await state.swRegistration.pushManager.subscribe({
@@ -1650,107 +1666,97 @@
       return;
     }
 
-    // CASO 3: permissão revogada pelo sistema → mostra banner
     state.pushAtivo = false;
     if(permissao === "denied"){
       mostrarAvisoPush();
     }
   }
 
-  /**
-   * Força uma renovação manual (usado pelo botão de debug).
-   */
   async function renovarPushManual(){
-  if(!temConfig()){
-    alert("Configure a URL e a API Key primeiro.");
-    return;
-  }
-  if(!state.swRegistration){
-    alert("Service Worker ainda não registrado. Recarregue o app.");
-    return;
-  }
-
-  const permissao = ("Notification" in window) ? Notification.permission : "default";
-  if(permissao !== "granted"){
-    const novaPermissao = await Notification.requestPermission();
-    if(novaPermissao !== "granted"){
-      alert("Permissão negada. Ative nas configurações do navegador.");
+    if(!temConfig()){
+      alert("Configure a URL e a API Key primeiro.");
       return;
     }
-  }
-
-  // Se já existe uma subscription, apenas reenvia e retorna
-  try{
-    const subExistente = await state.swRegistration.pushManager.getSubscription();
-    if(subExistente){
-      state.pushSubscription = subExistente;
-      state.pushAtivo = true;
-      await reenviarSubscription(subExistente);
-      atualizarPushUI();
-      alert("✅ Push já estava ativo. Reenviei a subscription para o backend.\n\nEndpoint: " +
-            subExistente.endpoint.slice(0, 60) + "...");
-      console.log("[push] subscription reenviada:", subExistente.endpoint.slice(0, 60) + "...");
+    if(!state.swRegistration){
+      alert("Service Worker ainda não registrado. Recarregue o app.");
       return;
     }
-  }catch(e){}
 
-  // Se NÃO existe, cria uma nova com retry
-  let ultimoErro = null;
+    const permissao = ("Notification" in window) ? Notification.permission : "default";
+    if(permissao !== "granted"){
+      const novaPermissao = await Notification.requestPermission();
+      if(novaPermissao !== "granted"){
+        alert("Permissão negada. Ative nas configurações do navegador.");
+        return;
+      }
+    }
 
-  for(let tentativa = 1; tentativa <= 3; tentativa++){
     try{
-      // Antes de tentar de novo, aguarda um tempo crescente
-      if(tentativa > 1){
-        const delay = tentativa * 3000; // 3s, 6s
-        console.log("[push] aguardando", delay, "ms antes da tentativa", tentativa);
-        await new Promise(r => setTimeout(r, delay));
+      const subExistente = await state.swRegistration.pushManager.getSubscription();
+      if(subExistente){
+        state.pushSubscription = subExistente;
+        state.pushAtivo = true;
+        await reenviarSubscription(subExistente);
+        atualizarPushUI();
+        alert("✅ Push já estava ativo. Reenviei a subscription para o backend.\n\nEndpoint: " +
+              subExistente.endpoint.slice(0, 60) + "...");
+        console.log("[push] subscription reenviada:", subExistente.endpoint.slice(0, 60) + "...");
+        return;
       }
+    }catch(e){}
 
-      // Tenta criar a subscription
-      const novaSub = await state.swRegistration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
+    let ultimoErro = null;
 
-      state.pushSubscription = novaSub;
-      state.pushAtivo = true;
-      state.ultimaRenovacaoPush = Date.now();
+    for(let tentativa = 1; tentativa <= 3; tentativa++){
+      try{
+        if(tentativa > 1){
+          const delay = tentativa * 3000;
+          console.log("[push] aguardando", delay, "ms antes da tentativa", tentativa);
+          await new Promise(r => setTimeout(r, delay));
+        }
 
-      await reenviarSubscription(novaSub);
-      atualizarPushUI();
+        const novaSub = await state.swRegistration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+        });
 
-      alert("✅ Push renovado com sucesso!\n\nEndpoint: " +
-            novaSub.endpoint.slice(0, 60) + "...");
-      console.log("[push] renovação manual concluída:", novaSub.endpoint.slice(0, 60) + "...");
-      return;
+        state.pushSubscription = novaSub;
+        state.pushAtivo = true;
+        state.ultimaRenovacaoPush = Date.now();
 
-    }catch(err){
-      ultimoErro = err;
-      console.warn("[push] tentativa", tentativa, "falhou:", err.message);
+        await reenviarSubscription(novaSub);
+        atualizarPushUI();
 
-      // Se for erro diferente de "push service error", para o loop
-      if(err.message && !err.message.includes("push service error")){
-        break;
+        alert("✅ Push renovado com sucesso!\n\nEndpoint: " +
+              novaSub.endpoint.slice(0, 60) + "...");
+        console.log("[push] renovação manual concluída:", novaSub.endpoint.slice(0, 60) + "...");
+        return;
+
+      }catch(err){
+        ultimoErro = err;
+        console.warn("[push] tentativa", tentativa, "falhou:", err.message);
+
+        if(err.message && !err.message.includes("push service error")){
+          break;
+        }
       }
     }
+
+    console.error("[push] renovação falhou após 3 tentativas:", ultimoErro);
+
+    let mensagem = "Não foi possível renovar o push.\n\n";
+
+    if(ultimoErro && ultimoErro.message && ultimoErro.message.includes("push service error")){
+      mensagem += "O FCM (serviço de push do Google) recusou a solicitação. Isso geralmente acontece quando:\n\n" +
+                  "1. Você tentou renovar muitas vezes em pouco tempo (rate limit)\n" +
+                  "2. A subscription anterior ainda está sendo liberada\n\n" +
+                  "Aguarde 15-30 minutos e tente novamente.";
+    } else {
+      mensagem += "Erro: " + (ultimoErro ? ultimoErro.message : "desconhecido");
+    }
+
+    alert(mensagem);
   }
-
-  // Se chegou aqui, todas as tentativas falharam
-  console.error("[push] renovação falhou após 3 tentativas:", ultimoErro);
-
-  let mensagem = "Não foi possível renovar o push.\n\n";
-
-  if(ultimoErro && ultimoErro.message && ultimoErro.message.includes("push service error")){
-    mensagem += "O FCM (serviço de push do Google) recusou a solicitação. Isso geralmente acontece quando:\n\n" +
-                "1. Você tentou renovar muitas vezes em pouco tempo (rate limit)\n" +
-                "2. A subscription anterior ainda está sendo liberada\n\n" +
-                "Aguarde 15-30 minutos e tente novamente.";
-  } else {
-    mensagem += "Erro: " + (ultimoErro ? ultimoErro.message : "desconhecido");
-  }
-
-  alert(mensagem);
-}
 
   function mostrarAvisoPush(){
     const el1 = document.getElementById("avisoPush");
@@ -1881,6 +1887,131 @@
   });
 
   /* =========================================================
+     BACKUP E IMPORTAÇÃO
+     ========================================================= */
+  function exportarBackup(){
+    try{
+      const dados = {
+        versao: 1,
+        exportadoEm: new Date().toISOString(),
+        tipo: "mila_whats_config",
+        config: {
+          backendUrl: state.backendUrl || "",
+          apiKey: state.apiKey || ""
+        },
+        deviceId: state.deviceId || "",
+        tema: (function(){
+          try{
+            return localStorage.getItem("mila_whats_tema") || "light";
+          }catch(e){
+            return "light";
+          }
+        })()
+      };
+
+      const agora = new Date();
+      const pad = function(n){ return String(n).padStart(2, "0"); };
+      const dataArq = agora.getFullYear() + "-" +
+                      pad(agora.getMonth()+1) + "-" +
+                      pad(agora.getDate());
+      const nome = "mila_whats_backup_" + dataArq + ".json";
+
+      const blob = new Blob([JSON.stringify(dados, null, 2)],
+                            { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = nome;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+
+      alert("Backup gerado: " + nome);
+    }catch(err){
+      alert("Erro ao gerar backup: " + err.message);
+    }
+  }
+
+  function importarBackup(file){
+    const reader = new FileReader();
+
+    reader.onload = function(ev){
+      try{
+        const dados = JSON.parse(ev.target.result);
+
+        if(!dados || typeof dados !== "object"){
+          alert("Arquivo inválido.");
+          return;
+        }
+
+        if(dados.tipo !== "mila_whats_config"){
+          alert("Este arquivo não é um backup do Mila Whats.");
+          return;
+        }
+
+        const cfg = dados.config || {};
+        const backendUrl = String(cfg.backendUrl || "").trim();
+        const apiKey = String(cfg.apiKey || "").trim();
+
+        if(!backendUrl || !apiKey){
+          alert("Backup incompleto: URL do backend ou API Key ausente.");
+          return;
+        }
+
+        const resumo = "Restaurar configuração?\n\n" +
+                       "URL: " + backendUrl + "\n" +
+                       "API Key: " + apiKey.slice(0, 20) + "...\n" +
+                       "Device ID: " + (dados.deviceId ? dados.deviceId.slice(0, 16) + "..." : "(vazio)") + "\n" +
+                       "Tema: " + (dados.tema || "light") + "\n\n" +
+                       "Isso vai sobrescrever a configuração atual.";
+
+        if(!confirm(resumo)) return;
+
+        state.backendUrl = backendUrl.replace(/\/+$/, "");
+        state.apiKey = apiKey;
+        saveConfig();
+
+        if(dados.deviceId && typeof dados.deviceId === "string"){
+          try{
+            localStorage.setItem("mila_whats_device_id", dados.deviceId);
+            state.deviceId = dados.deviceId;
+          }catch(e){}
+        }
+
+        if(dados.tema === "dark" || dados.tema === "light"){
+          try{
+            localStorage.setItem("mila_whats_tema", dados.tema);
+            document.documentElement.setAttribute("data-theme", dados.tema);
+          }catch(e){}
+        }
+
+        document.getElementById("cfgBackendUrl").value = state.backendUrl;
+        document.getElementById("cfgApiKey").value = state.apiKey;
+
+        alert("Backup restaurado com sucesso. Recarregue o app para aplicar tudo.");
+      }catch(err){
+        alert("Erro ao ler o arquivo: " + err.message);
+      }
+    };
+
+    reader.readAsText(file);
+  }
+
+  document.getElementById("btnExportarBackup").addEventListener("click", exportarBackup);
+
+  document.getElementById("btnImportarBackup").addEventListener("click", function(){
+    document.getElementById("inputImportBackup").click();
+  });
+
+  document.getElementById("inputImportBackup").addEventListener("change", function(e){
+    const file = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if(!file) return;
+    importarBackup(file);
+  });
+
+  /* =========================================================
      OVERLAYS
      ========================================================= */
   function openOverlay(id){ document.getElementById(id).classList.add("show"); }
@@ -1927,12 +2058,29 @@
     }, INTERVALO_REFRESH_CONVERSA);
   }
 
-  function mostrarLista(){
+  function mostrarLista(opts){
+    opts = opts || {};
+
+    // Se veio do botão ← da UI, delega pro histórico
+    if(opts.viaBotaoUI){
+      try{
+        history.back();
+        return;
+      }catch(e){}
+    }
+
     document.getElementById("telaConversa").style.display = "none";
     document.getElementById("telaLista").style.display = "block";
     state.telefoneAtual = null;
     state.clienteAtual = "";
     state.mensagens = [];
+
+    // Limpa hash residual (#conversa=...) sem empilhar nova entrada
+    if(window.location.hash && window.location.hash.indexOf("#conversa=") === 0){
+      try{
+        history.replaceState({ tela: "lista" }, "", window.location.pathname + window.location.search);
+      }catch(e){}
+    }
 
     pararRefreshConversa();
     iniciarRefreshLista();
@@ -1940,7 +2088,10 @@
     carregarConversas();
   }
 
-  function mostrarConversa(telefone, nome){
+  function mostrarConversa(telefone, nome, opts){
+    opts = opts || {};
+    const empilhar = opts.empilhar !== false; // padrão: empilha
+
     document.getElementById("telaLista").style.display = "none";
     document.getElementById("telaConversa").style.display = "block";
     state.telefoneAtual = telefone;
@@ -1950,6 +2101,17 @@
 
     state.mensagens = [];
     state.erroConversa = null;
+
+    // Empilha estado no histórico para o botão voltar do celular funcionar
+    if(empilhar){
+      try{
+        history.pushState(
+          { tela: "conversa", telefone: telefone, cliente: nomeFinal },
+          "",
+          "#conversa=" + encodeURIComponent(telefone)
+        );
+      }catch(e){}
+    }
 
     carregarConversa();
     marcarComoLida(telefone);
@@ -2187,7 +2349,6 @@
 
     const tipo = m.tipo || "text";
 
-    /* ---------- IMAGEM ---------- */
     if(tipo === "image"){
       const temUrl = !!m.media_url;
       const srcLocal = m._localSrc || "";
@@ -2215,7 +2376,6 @@
       `;
     }
 
-    /* ---------- ÁUDIO / VOICE ---------- */
     if(tipo === "audio" || tipo === "voice"){
       const temUrl = !!m.media_url;
       const srcLocal = m._localSrc || "";
@@ -2256,7 +2416,6 @@
       `;
     }
 
-    /* ---------- TEXTO / TEMPLATE ---------- */
     const textoExibido = (tipo === "template")
       ? formatarTextoTemplate(m.conteudo || "")
       : (m.conteudo || "");
@@ -2272,29 +2431,6 @@
         </div>
       </div>
     `;
-  }
-
-  /**
-   * Converte o texto cru do Supabase (ex: "[Template: confirmao_agendamento]
-   * Serviço em 08/10/2026 às 11:30") em um texto amigável e legível
-   * para o chat, próximo ao que a cliente vê.
-   */
-  function formatarTextoTemplate(txt){
-    if(!txt || typeof txt !== "string") return "";
-
-    // Caso 1: já está no formato bonito (começa com "Olá,")
-    if(txt.trim().startsWith("Olá,")){
-      return txt;
-    }
-
-    // Caso 2: formato cru "[Template: nome_do_template] corpo..."
-    const match = txt.match(/^\[Template:\s*[^\]]+\]\s*(.+)$/i);
-    if(match && match[1]){
-      return match[1].trim();
-    }
-
-    // Caso 3: fallback — devolve o texto original
-    return txt;
   }
 
   function gerarBarrasOnda(seed){
@@ -2986,7 +3122,9 @@
   /* =========================================================
      EVENTOS: CONVERSA
      ========================================================= */
-  document.getElementById("btnVoltar").addEventListener("click", mostrarLista);
+  document.getElementById("btnVoltar").addEventListener("click", () => {
+    mostrarLista({ viaBotaoUI: true });
+  });
 
   document.getElementById("btnReloadConversa").addEventListener("click", () => {
     carregarConversa();
@@ -3011,13 +3149,40 @@
   });
 
   /* =========================================================
+     BOTÃO VOLTAR DO CELULAR (popstate)
+     ========================================================= */
+  window.addEventListener("popstate", (event) => {
+    const st = event.state || {};
+
+    // Se o estado aponta para uma conversa, abre ela
+    if(st.tela === "conversa" && st.telefone){
+      mostrarConversa(st.telefone, st.cliente || "", { empilhar: false });
+      return;
+    }
+
+    // Caso contrário, se estamos dentro de uma conversa, volta pra lista
+    if(state.telefoneAtual){
+      document.getElementById("telaConversa").style.display = "none";
+      document.getElementById("telaLista").style.display = "block";
+      state.telefoneAtual = null;
+      state.clienteAtual = "";
+      state.mensagens = [];
+
+      pararRefreshConversa();
+      iniciarRefreshLista();
+
+      carregarConversas();
+    }
+    // Se já estamos na lista, deixa o navegador sair do app (comportamento correto)
+  });
+
+  /* =========================================================
      VISIBILITY CHANGE
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
       atualizarBadge();
 
-      // Reenvia subscription ao voltar pro app (com debounce de 5 min)
       if(state.pushSubscription){
         reenviarSubscription(state.pushSubscription);
       }
@@ -3037,7 +3202,13 @@
     navigator.serviceWorker.addEventListener("message", (event) => {
       const data = event.data || {};
       if(data.type === "abrirConversa" && data.telefone){
-        mostrarConversa(data.telefone, data.cliente || "Cliente");
+        // Se já estamos nessa conversa, não empilha de novo
+        const jaEstouNela = (state.telefoneAtual === data.telefone);
+        mostrarConversa(
+          data.telefone,
+          data.cliente || "Cliente",
+          { empilhar: !jaEstouNela }
+        );
       }
     });
   }
@@ -3046,14 +3217,29 @@
      DEEP-LINK via URL
      ========================================================= */
   function checarDeepLink(){
+    // 1) Preferência: hash #conversa=... (usado pelo pushState)
+    const hash = window.location.hash || "";
+    const mHash = hash.match(/^#conversa=([^&]+)$/);
+    if(mHash && mHash[1] && temConfig()){
+      const tel = decodeURIComponent(mHash[1]);
+      const conv = state.conversas.find(x => x.telefone === tel);
+      const nome = conv ? nomeExibicao(conv) : "";
+      setTimeout(() => {
+        // Já vem de estado do histórico — não empilha de novo
+        mostrarConversa(tel, nome || formatarTelefone(tel), { empilhar: false });
+      }, 300);
+      return true;
+    }
+
+    // 2) Fallback: query string ?tel=...&cliente=... (deep-link de push legado)
     const params = new URLSearchParams(window.location.search);
     const tel = params.get("tel");
     const cliente = params.get("cliente") || "";
 
     if(tel && temConfig()){
       try{
-        const urlLimpa = window.location.pathname + window.location.hash;
-        window.history.replaceState({}, "", urlLimpa);
+        const urlLimpa = window.location.pathname;
+        history.replaceState({ tela: "lista" }, "", urlLimpa);
       }catch(e){}
 
       setTimeout(() => {
@@ -3069,6 +3255,19 @@
      ========================================================= */
   async function boot(){
     loadConfig();
+
+    // Estado inicial do histórico — garante que o popstate
+    // tenha um "estado de lista" para cair de volta
+    try{
+      if(!history.state){
+        history.replaceState(
+          { tela: "lista" },
+          "",
+          window.location.pathname + window.location.search + window.location.hash
+        );
+      }
+    }catch(e){}
+
     renderLista();
 
     if("serviceWorker" in navigator){
