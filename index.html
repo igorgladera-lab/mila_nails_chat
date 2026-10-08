@@ -406,7 +406,42 @@
     overscroll-behavior:contain;
     transition:top .15s;
   }
-
+   .chat-sep-dia{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin:14px 8px 10px;
+  color:var(--muted);
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.6px;
+  text-transform:uppercase;
+  user-select:none;
+}
+.chat-sep-dia::before,
+.chat-sep-dia::after{
+  content:"";
+  flex:1;
+  height:1px;
+  background:rgba(0,0,0,.08);
+}
+html[data-theme="dark"] .chat-sep-dia::before,
+html[data-theme="dark"] .chat-sep-dia::after{
+  background:rgba(255,255,255,.1);
+}
+.chat-sep-dia .chat-sep-texto{
+  background:var(--surface);
+  padding:5px 12px;
+  border-radius:12px;
+  box-shadow:0 1px 2px rgba(0,0,0,.06);
+  color:var(--text);
+  font-weight:600;
+  letter-spacing:.3px;
+  text-transform:none;
+}
+html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
+  box-shadow:0 1px 2px rgba(0,0,0,.3);
+}
   .chat-aviso-24h{
     background:var(--aviso-24h);
     border:1px solid var(--aviso-24h-borda);
@@ -1532,7 +1567,58 @@
     if(partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
     return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
   }
+  /* =========================================================
+   SEPARADOR DE DIA — texto exibido entre grupos de mensagens
+   Retorna "Hoje", "Ontem" ou "Dia da semana, DD/MM[/AAAA]"
+   ========================================================= */
+const DIAS_SEMANA_PT = [
+  "Domingo",
+  "Segunda-feira",
+  "Terça-feira",
+  "Quarta-feira",
+  "Quinta-feira",
+  "Sexta-feira",
+  "Sábado"
+];
 
+function formatarDiaSeparador(iso){
+  if(!iso) return "";
+
+  const d = new Date(iso);
+  if(isNaN(d.getTime())) return "";
+
+  const agora = new Date();
+
+  // Zera horas para comparar só a data (dia local)
+  const dDia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+
+  const diffDias = Math.round((hoje - dDia) / (24 * 60 * 60 * 1000));
+
+  if(diffDias === 0) return "Hoje";
+  if(diffDias === 1) return "Ontem";
+
+  const diaSemana = DIAS_SEMANA_PT[d.getDay()];
+  const dia = String(d.getDate()).padStart(2, "0");
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+
+  // Se for do mesmo ano, omite o ano
+  const mesmoAno = d.getFullYear() === agora.getFullYear();
+  const sufixoAno = mesmoAno ? "" : "/" + d.getFullYear();
+
+  return diaSemana + ", " + dia + "/" + mes + sufixoAno;
+}
+
+/* Compara se duas mensagens são do mesmo dia (dia local) */
+function mesmoDiaLocal(isoA, isoB){
+  if(!isoA || !isoB) return false;
+  const a = new Date(isoA);
+  const b = new Date(isoB);
+  if(isNaN(a.getTime()) || isNaN(b.getTime())) return false;
+  return a.getFullYear() === b.getFullYear()
+      && a.getMonth()    === b.getMonth()
+      && a.getDate()     === b.getDate();
+}
   function formatarHorario(iso){
     if(!iso) return "";
     const d = new Date(iso);
@@ -2575,14 +2661,32 @@
       `;
     }
 
-    if(state.mensagens.length === 0){
+        if(state.mensagens.length === 0){
       html += `
         <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px 16px;">
           Nenhuma mensagem ainda.
         </div>
       `;
     } else {
+      let ultimaDataISO = null;
+
       state.mensagens.forEach(m => {
+        // Só insere separador se a mensagem tem data
+        if(m.enviado_em){
+          // Primeira mensagem OU mudou de dia em relação à anterior
+          if(!ultimaDataISO || !mesmoDiaLocal(ultimaDataISO, m.enviado_em)){
+            const textoDia = formatarDiaSeparador(m.enviado_em);
+            if(textoDia){
+              html += `
+                <div class="chat-sep-dia">
+                  <span class="chat-sep-texto">${escapeHtml(textoDia)}</span>
+                </div>
+              `;
+            }
+          }
+          ultimaDataISO = m.enviado_em;
+        }
+
         html += renderBubble(m);
       });
     }
