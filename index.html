@@ -112,13 +112,13 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 
   html, body{
-  height:100%;
-  margin:0;
-  padding:0;
-  overflow:hidden;
-  overscroll-behavior:none;
-  background:var(--bg);   /* ✅ CORREÇÃO: fundo bege também no html */
-}
+    height:100%;
+    margin:0;
+    padding:0;
+    overflow:hidden;
+    overscroll-behavior:none;
+    background:var(--bg);
+  }
 
   body{
     background:var(--bg);
@@ -186,17 +186,17 @@
   }
 
   .content{
-  position:fixed;
-  left:0;
-  right:0;
-  top:calc(var(--header-h) + env(safe-area-inset-top));
-  bottom:0;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  transition:top .15s;
-  background:var(--bg);   /* ✅ CORREÇÃO: garante fundo bege atrás das conversas */
-}
+    position:fixed;
+    left:0;
+    right:0;
+    top:calc(var(--header-h) + env(safe-area-inset-top));
+    bottom:0;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    transition:top .15s;
+    background:var(--bg);
+  }
 
   .btn-float{
     position:fixed;
@@ -890,7 +890,8 @@
   }
 
   .push-bloco,
-  .backup-bloco{
+  .backup-bloco,
+  .tema-bloco{
     border:1px solid var(--border);
     border-radius:10px;
     padding:14px;
@@ -899,7 +900,8 @@
   }
 
   .push-bloco .push-titulo,
-  .backup-bloco .backup-titulo{
+  .backup-bloco .backup-titulo,
+  .tema-bloco .tema-titulo{
     font-size:13px;
     font-weight:700;
     color:var(--text);
@@ -909,7 +911,8 @@
     gap:6px;
   }
 
-  .backup-bloco .backup-sub{
+  .backup-bloco .backup-sub,
+  .tema-bloco .tema-sub{
     font-size:12px;
     color:var(--muted);
     line-height:1.4;
@@ -977,6 +980,50 @@
   .push-bloco .push-btn.secundario:active,
   .backup-bloco .backup-btn.secundario:active{
     background:var(--btn-active);
+  }
+
+  /* =========================================================
+     ✅ NOVO — Seletor de tema (claro / escuro / sistema)
+     ========================================================= */
+  .tema-switch{
+    display:flex;
+    gap:8px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:4px;
+  }
+
+  .tema-switch .tema-opcao{
+    flex:1;
+    background:transparent;
+    border:none;
+    border-radius:6px;
+    padding:10px 8px;
+    font-size:13px;
+    font-weight:600;
+    font-family:inherit;
+    color:var(--muted);
+    cursor:pointer;
+    transition:background .15s, color .15s;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    line-height:1.2;
+  }
+
+  .tema-switch .tema-opcao:active{
+    background:var(--btn-active);
+  }
+
+  .tema-switch .tema-opcao.ativa{
+    background:var(--primary);
+    color:#fff;
+  }
+
+  .tema-switch .tema-opcao .icone{
+    font-size:14px;
   }
 
   .btn{
@@ -1192,6 +1239,26 @@
         <input type="password" id="cfgApiKey" placeholder="mila_nails_sk_..." autocomplete="off">
       </div>
 
+      <!-- ✅ NOVO BLOCO: Tema -->
+      <div class="tema-bloco">
+        <div class="tema-titulo">🌗 Tema do app</div>
+        <div class="tema-sub">Escolha como o app deve aparecer neste aparelho.</div>
+        <div class="tema-switch" id="temaSwitch">
+          <button class="tema-opcao" data-tema="light" type="button">
+            <span class="icone">☀️</span>
+            <span>Claro</span>
+          </button>
+          <button class="tema-opcao" data-tema="dark" type="button">
+            <span class="icone">🌙</span>
+            <span>Escuro</span>
+          </button>
+          <button class="tema-opcao" data-tema="auto" type="button">
+            <span class="icone">⚙️</span>
+            <span>Sistema</span>
+          </button>
+        </div>
+      </div>
+
       <div class="push-bloco">
         <div class="push-titulo">🔔 Notificações push</div>
         <div class="push-status" id="pushStatus">Verificando...</div>
@@ -1240,6 +1307,7 @@
   "use strict";
 
   const LS_CONFIG = "mila_whats_config";
+  const LS_TEMA   = "mila_whats_tema";
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
   const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000;
@@ -1247,7 +1315,6 @@
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
 
-  /* ✅ v1.9.0-fix: duração mínima confiável (bate com o backend) */
   const DURACAO_MINIMA_AUDIO = 2;
 
   const VAPID_PUBLIC_KEY = "BPaeCnBrwLNEAYDwSWy9UI_ZsoBCLsbiJjNtagxCa3PC9gNa8rTuUpngtyBJsaM4FktUkfhHp3rmgmwcTjjL8AE";
@@ -1330,6 +1397,74 @@
 
   function urlBase(path){
     return state.backendUrl.replace(/\/+$/, "") + path;
+  }
+
+  /* =========================================================
+     ✅ TEMA (claro / escuro / sistema)
+     ========================================================= */
+  function temaSalvo(){
+    try{
+      const v = localStorage.getItem(LS_TEMA);
+      if(v === "dark" || v === "light" || v === "auto") return v;
+    }catch(e){}
+    return "auto";
+  }
+
+  function resolverTema(preferencia){
+    if(preferencia === "dark" || preferencia === "light") return preferencia;
+    // auto → detecta sistema
+    try{
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }catch(e){
+      return "light";
+    }
+  }
+
+  function aplicarTema(preferencia){
+    const efetivo = resolverTema(preferencia);
+    document.documentElement.setAttribute("data-theme", efetivo);
+    try{
+      // Salva a PREFERÊNCIA (auto/light/dark), não o efetivo
+      localStorage.setItem(LS_TEMA, preferencia);
+    }catch(e){}
+  }
+
+  function atualizarTemaUI(){
+    const atual = temaSalvo();
+    const botoes = document.querySelectorAll("#temaSwitch .tema-opcao");
+    botoes.forEach(btn => {
+      const t = btn.getAttribute("data-tema");
+      if(t === atual) btn.classList.add("ativa");
+      else            btn.classList.remove("ativa");
+    });
+  }
+
+  function configurarListenersTema(){
+    const container = document.getElementById("temaSwitch");
+    if(!container) return;
+
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".tema-opcao");
+      if(!btn) return;
+
+      const novoTema = btn.getAttribute("data-tema");
+      if(!novoTema) return;
+
+      aplicarTema(novoTema);
+      atualizarTemaUI();
+    });
+
+    // Se estiver em "auto", reage a mudanças do sistema
+    try{
+      const mq = window.matchMedia("(prefers-color-scheme: dark)");
+      const handler = () => {
+        if(temaSalvo() === "auto"){
+          aplicarTema("auto");
+        }
+      };
+      if(mq.addEventListener) mq.addEventListener("change", handler);
+      else if(mq.addListener) mq.addListener(handler);
+    }catch(e){}
   }
 
   /* =========================================================
@@ -1905,13 +2040,7 @@
           apiKey: state.apiKey || ""
         },
         deviceId: state.deviceId || "",
-        tema: (function(){
-          try{
-            return localStorage.getItem("mila_whats_tema") || "light";
-          }catch(e){
-            return "light";
-          }
-        })()
+        tema: temaSalvo()
       };
 
       const agora = new Date();
@@ -1968,7 +2097,7 @@
                        "URL: " + backendUrl + "\n" +
                        "API Key: " + apiKey.slice(0, 20) + "...\n" +
                        "Device ID: " + (dados.deviceId ? dados.deviceId.slice(0, 16) + "..." : "(vazio)") + "\n" +
-                       "Tema: " + (dados.tema || "light") + "\n\n" +
+                       "Tema: " + (dados.tema || "auto") + "\n\n" +
                        "Isso vai sobrescrever a configuração atual.";
 
         if(!confirm(resumo)) return;
@@ -1984,11 +2113,9 @@
           }catch(e){}
         }
 
-        if(dados.tema === "dark" || dados.tema === "light"){
-          try{
-            localStorage.setItem("mila_whats_tema", dados.tema);
-            document.documentElement.setAttribute("data-theme", dados.tema);
-          }catch(e){}
+        if(dados.tema === "dark" || dados.tema === "light" || dados.tema === "auto"){
+          aplicarTema(dados.tema);
+          atualizarTemaUI();
         }
 
         document.getElementById("cfgBackendUrl").value = state.backendUrl;
@@ -2939,7 +3066,6 @@
   async function finalizarGravacaoEEnviar(){
     if(!state.gravando) return;
 
-    // ✅ Duração real da gravação (em segundos)
     const duracaoRealSeg = (Date.now() - state.inicioGravacao) / 1000;
     const duracaoSeg = Math.max(1, Math.round(duracaoRealSeg));
 
@@ -2977,7 +3103,6 @@
       return;
     }
 
-    // ✅ Se gravação for muito curta (< 2s), avisa o usuário
     if(duracaoSeg < DURACAO_MINIMA_AUDIO){
       alert("Áudio muito curto (" + duracaoSeg + "s). Grave pelo menos " +
             DURACAO_MINIMA_AUDIO + " segundos.");
@@ -3058,6 +3183,7 @@
     document.getElementById("cfgBackendUrl").value = state.backendUrl || "";
     document.getElementById("cfgApiKey").value = state.apiKey || "";
     atualizarPushUI();
+    atualizarTemaUI();
     openOverlay("overlayConfig");
   });
 
@@ -3115,6 +3241,7 @@
     document.getElementById("cfgBackendUrl").value = state.backendUrl || "";
     document.getElementById("cfgApiKey").value = state.apiKey || "";
     atualizarPushUI();
+    atualizarTemaUI();
     openOverlay("overlayConfig");
   });
 
@@ -3127,6 +3254,7 @@
     document.getElementById("cfgBackendUrl").value = state.backendUrl || "";
     document.getElementById("cfgApiKey").value = state.apiKey || "";
     atualizarPushUI();
+    atualizarTemaUI();
     openOverlay("overlayConfig");
   });
 
@@ -3259,6 +3387,8 @@
      ========================================================= */
   async function boot(){
     loadConfig();
+    configurarListenersTema();
+    atualizarTemaUI();
 
     try{
       if(!history.state){
