@@ -112,12 +112,13 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
 
   html, body{
-    height:100%;
-    margin:0;
-    padding:0;
-    overflow:hidden;
-    overscroll-behavior:none;
-  }
+  height:100%;
+  margin:0;
+  padding:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+  background:var(--bg);   /* ✅ CORREÇÃO: fundo bege também no html */
+}
 
   body{
     background:var(--bg);
@@ -185,16 +186,17 @@
   }
 
   .content{
-    position:fixed;
-    left:0;
-    right:0;
-    top:calc(var(--header-h) + env(safe-area-inset-top));
-    bottom:0;
-    overflow-y:auto;
-    -webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;
-    transition:top .15s;
-  }
+  position:fixed;
+  left:0;
+  right:0;
+  top:calc(var(--header-h) + env(safe-area-inset-top));
+  bottom:0;
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain;
+  transition:top .15s;
+  background:var(--bg);   /* ✅ CORREÇÃO: garante fundo bege atrás das conversas */
+}
 
   .btn-float{
     position:fixed;
@@ -1245,6 +1247,9 @@
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
 
+  /* ✅ v1.9.0-fix: duração mínima confiável (bate com o backend) */
+  const DURACAO_MINIMA_AUDIO = 2;
+
   const VAPID_PUBLIC_KEY = "BPaeCnBrwLNEAYDwSWy9UI_ZsoBCLsbiJjNtagxCa3PC9gNa8rTuUpngtyBJsaM4FktUkfhHp3rmgmwcTjjL8AE";
 
   /* =========================================================
@@ -2061,7 +2066,6 @@
   function mostrarLista(opts){
     opts = opts || {};
 
-    // Se veio do botão ← da UI, delega pro histórico
     if(opts.viaBotaoUI){
       try{
         history.back();
@@ -2075,7 +2079,6 @@
     state.clienteAtual = "";
     state.mensagens = [];
 
-    // Limpa hash residual (#conversa=...) sem empilhar nova entrada
     if(window.location.hash && window.location.hash.indexOf("#conversa=") === 0){
       try{
         history.replaceState({ tela: "lista" }, "", window.location.pathname + window.location.search);
@@ -2090,7 +2093,7 @@
 
   function mostrarConversa(telefone, nome, opts){
     opts = opts || {};
-    const empilhar = opts.empilhar !== false; // padrão: empilha
+    const empilhar = opts.empilhar !== false;
 
     document.getElementById("telaLista").style.display = "none";
     document.getElementById("telaConversa").style.display = "block";
@@ -2102,7 +2105,6 @@
     state.mensagens = [];
     state.erroConversa = null;
 
-    // Empilha estado no histórico para o botão voltar do celular funcionar
     if(empilhar){
       try{
         history.pushState(
@@ -2937,7 +2939,9 @@
   async function finalizarGravacaoEEnviar(){
     if(!state.gravando) return;
 
-    const duracaoSeg = Math.max(1, Math.round((Date.now() - state.inicioGravacao) / 1000));
+    // ✅ Duração real da gravação (em segundos)
+    const duracaoRealSeg = (Date.now() - state.inicioGravacao) / 1000;
+    const duracaoSeg = Math.max(1, Math.round(duracaoRealSeg));
 
     const recorder = state.mediaRecorder;
     const chunks = state.chunksAudio;
@@ -2970,6 +2974,13 @@
 
     if(blob.size > LIMITE_AUDIO){
       alert("Áudio acima de 16 MB. Grave um mais curto.");
+      return;
+    }
+
+    // ✅ Se gravação for muito curta (< 2s), avisa o usuário
+    if(duracaoSeg < DURACAO_MINIMA_AUDIO){
+      alert("Áudio muito curto (" + duracaoSeg + "s). Grave pelo menos " +
+            DURACAO_MINIMA_AUDIO + " segundos.");
       return;
     }
 
@@ -3154,13 +3165,11 @@
   window.addEventListener("popstate", (event) => {
     const st = event.state || {};
 
-    // Se o estado aponta para uma conversa, abre ela
     if(st.tela === "conversa" && st.telefone){
       mostrarConversa(st.telefone, st.cliente || "", { empilhar: false });
       return;
     }
 
-    // Caso contrário, se estamos dentro de uma conversa, volta pra lista
     if(state.telefoneAtual){
       document.getElementById("telaConversa").style.display = "none";
       document.getElementById("telaLista").style.display = "block";
@@ -3173,7 +3182,6 @@
 
       carregarConversas();
     }
-    // Se já estamos na lista, deixa o navegador sair do app (comportamento correto)
   });
 
   /* =========================================================
@@ -3202,7 +3210,6 @@
     navigator.serviceWorker.addEventListener("message", (event) => {
       const data = event.data || {};
       if(data.type === "abrirConversa" && data.telefone){
-        // Se já estamos nessa conversa, não empilha de novo
         const jaEstouNela = (state.telefoneAtual === data.telefone);
         mostrarConversa(
           data.telefone,
@@ -3217,7 +3224,6 @@
      DEEP-LINK via URL
      ========================================================= */
   function checarDeepLink(){
-    // 1) Preferência: hash #conversa=... (usado pelo pushState)
     const hash = window.location.hash || "";
     const mHash = hash.match(/^#conversa=([^&]+)$/);
     if(mHash && mHash[1] && temConfig()){
@@ -3225,13 +3231,11 @@
       const conv = state.conversas.find(x => x.telefone === tel);
       const nome = conv ? nomeExibicao(conv) : "";
       setTimeout(() => {
-        // Já vem de estado do histórico — não empilha de novo
         mostrarConversa(tel, nome || formatarTelefone(tel), { empilhar: false });
       }, 300);
       return true;
     }
 
-    // 2) Fallback: query string ?tel=...&cliente=... (deep-link de push legado)
     const params = new URLSearchParams(window.location.search);
     const tel = params.get("tel");
     const cliente = params.get("cliente") || "";
@@ -3256,8 +3260,6 @@
   async function boot(){
     loadConfig();
 
-    // Estado inicial do histórico — garante que o popstate
-    // tenha um "estado de lista" para cair de volta
     try{
       if(!history.state){
         history.replaceState(
