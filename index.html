@@ -982,9 +982,6 @@
     background:var(--btn-active);
   }
 
-  /* =========================================================
-     ✅ NOVO — Seletor de tema (claro / escuro / sistema)
-     ========================================================= */
   .tema-switch{
     display:flex;
     gap:8px;
@@ -1239,7 +1236,6 @@
         <input type="password" id="cfgApiKey" placeholder="mila_nails_sk_..." autocomplete="off">
       </div>
 
-      <!-- ✅ NOVO BLOCO: Tema -->
       <div class="tema-bloco">
         <div class="tema-titulo">🌗 Tema do app</div>
         <div class="tema-sub">Escolha como o app deve aparecer neste aparelho.</div>
@@ -1306,8 +1302,10 @@
 (function(){
   "use strict";
 
-  const LS_CONFIG = "mila_whats_config";
-  const LS_TEMA   = "mila_whats_tema";
+  const LS_CONFIG    = "mila_whats_config";
+  const LS_TEMA      = "mila_whats_tema";
+  const LS_DEVICE_ID = "mila_whats_device_id";
+
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
   const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000;
@@ -1363,6 +1361,35 @@
   };
 
   /* =========================================================
+     ✅ deviceId — identifica este dispositivo de forma única
+     Gerado uma vez e persistido em localStorage.
+     Sobrevive a fechar/reabrir o app.
+     ========================================================= */
+  function gerarDeviceId(){
+    return "dev_" +
+           Date.now().toString(36) + "_" +
+           Math.random().toString(36).slice(2, 10) +
+           Math.random().toString(36).slice(2, 10);
+  }
+
+  function obterOuCriarDeviceId(){
+    let id = null;
+    try{
+      id = localStorage.getItem(LS_DEVICE_ID);
+    }catch(e){}
+
+    if(id && String(id).trim()){
+      return String(id).trim();
+    }
+
+    id = gerarDeviceId();
+    try{
+      localStorage.setItem(LS_DEVICE_ID, id);
+    }catch(e){}
+    return id;
+  }
+
+  /* =========================================================
      PERSISTÊNCIA
      ========================================================= */
   function loadConfig(){
@@ -1372,16 +1399,10 @@
         state.backendUrl = typeof raw.backendUrl === "string" ? raw.backendUrl : "";
         state.apiKey     = typeof raw.apiKey === "string" ? raw.apiKey : "";
       }
-
-      const DEVICE_ID_KEY = "mila_whats_device_id";
-      let deviceId = localStorage.getItem(DEVICE_ID_KEY);
-      if(!deviceId){
-        deviceId = "dev_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 12);
-        localStorage.setItem(DEVICE_ID_KEY, deviceId);
-        console.log("[device] deviceId gerado:", deviceId);
-      }
-      state.deviceId = deviceId;
     }catch(e){}
+
+    state.deviceId = obterOuCriarDeviceId();
+    console.log("[device] deviceId:", state.deviceId);
   }
 
   function saveConfig(){
@@ -1400,7 +1421,7 @@
   }
 
   /* =========================================================
-     ✅ TEMA (claro / escuro / sistema)
+     TEMA (claro / escuro / sistema)
      ========================================================= */
   function temaSalvo(){
     try{
@@ -1412,7 +1433,6 @@
 
   function resolverTema(preferencia){
     if(preferencia === "dark" || preferencia === "light") return preferencia;
-    // auto → detecta sistema
     try{
       return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }catch(e){
@@ -1424,7 +1444,6 @@
     const efetivo = resolverTema(preferencia);
     document.documentElement.setAttribute("data-theme", efetivo);
     try{
-      // Salva a PREFERÊNCIA (auto/light/dark), não o efetivo
       localStorage.setItem(LS_TEMA, preferencia);
     }catch(e){}
   }
@@ -1454,7 +1473,6 @@
       atualizarTemaUI();
     });
 
-    // Se estiver em "auto", reage a mudanças do sistema
     try{
       const mq = window.matchMedia("(prefers-color-scheme: dark)");
       const handler = () => {
@@ -1728,6 +1746,13 @@
 
   async function reenviarSubscription(sub){
     if(!sub || !temConfig()) return;
+
+    // Garante que sempre temos um deviceId
+    if(!state.deviceId){
+      state.deviceId = obterOuCriarDeviceId();
+      console.log("[device] deviceId (recriado):", state.deviceId);
+    }
+
     try{
       const resp = await fetch(urlBase("/subscribe"), {
         method: "POST",
@@ -1737,7 +1762,8 @@
         },
         body: JSON.stringify({
           subscription: sub,
-          deviceId: state.deviceId
+          deviceId: state.deviceId,
+          userAgent: navigator.userAgent
         })
       });
       if(!resp.ok){
@@ -1951,6 +1977,10 @@
       state.pushSubscription = sub;
       state.pushAtivo = true;
 
+      if(!state.deviceId){
+        state.deviceId = obterOuCriarDeviceId();
+      }
+
       const resp = await fetch(urlBase("/subscribe"), {
         method: "POST",
         headers: {
@@ -1959,7 +1989,8 @@
         },
         body: JSON.stringify({
           subscription: sub,
-          deviceId: state.deviceId
+          deviceId: state.deviceId,
+          userAgent: navigator.userAgent
         })
       });
 
@@ -1997,7 +2028,8 @@
               "x-api-key": state.apiKey
             },
             body: JSON.stringify({
-              endpoint: state.pushSubscription.endpoint
+              endpoint: state.pushSubscription.endpoint,
+              deviceId: state.deviceId
             })
           });
         }catch(e){}
@@ -2106,10 +2138,10 @@
         state.apiKey = apiKey;
         saveConfig();
 
-        if(dados.deviceId && typeof dados.deviceId === "string"){
+        if(dados.deviceId && typeof dados.deviceId === "string" && dados.deviceId.trim()){
           try{
-            localStorage.setItem("mila_whats_device_id", dados.deviceId);
-            state.deviceId = dados.deviceId;
+            localStorage.setItem(LS_DEVICE_ID, dados.deviceId.trim());
+            state.deviceId = dados.deviceId.trim();
           }catch(e){}
         }
 
@@ -3389,6 +3421,8 @@
     loadConfig();
     configurarListenersTema();
     atualizarTemaUI();
+
+    console.log("[boot] Mila Whats iniciando — deviceId:", state.deviceId);
 
     try{
       if(!history.state){
