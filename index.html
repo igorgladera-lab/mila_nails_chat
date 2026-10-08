@@ -1310,6 +1310,9 @@
   const INTERVALO_REFRESH_CONVERSA = 15000;
   const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000;
 
+  /* ✅ Fase 2 — debounce da validação ativa (5 min) */
+  const INTERVALO_DEBOUNCE_VALIDACAO = 5 * 60 * 1000;
+
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
 
@@ -1345,6 +1348,7 @@
     pushSuportado: false,
     pushAtivo: false,
     ultimaVerificacaoPush: 0,
+    ultimaValidacaoPush: 0,   // ✅ Fase 2
     ultimaRenovacaoPush: 0,
     deviceId: "",
 
@@ -1361,7 +1365,7 @@
   };
 
   /* =========================================================
-     ✅ deviceId — identifica este dispositivo de forma única
+     deviceId — identifica este dispositivo de forma única
      Gerado uma vez e persistido em localStorage.
      Sobrevive a fechar/reabrir o app.
      ========================================================= */
@@ -1835,6 +1839,103 @@
     state.pushAtivo = false;
     if(permissao === "denied"){
       mostrarAvisoPush();
+    }
+  }
+
+  /* =========================================================
+     ✅ FASE 2 — validação ativa de push
+     Pergunta ao backend se a subscription atual ainda funciona.
+     Se não funcionar, tenta renovar silenciosamente.
+     Roda no boot, silencioso, com debounce de 5 minutos.
+     ========================================================= */
+  async function validarPushAtivo(){
+    // Sem SW registrado → nada a validar
+    if(!state.swRegistration) return;
+
+    // Sem config → nada a validar
+    if(!temConfig()) return;
+
+    // Sem subscription local → tenta renovar (talvez a permissão esteja granted)
+    if(!state.pushSubscription){
+      console.log("[push] validar: sem subscription local — tentando renovar");
+      await verificarErenovarSubscription({ forcar: true });
+      if(!state.pushSubscription) return;
+    }
+
+    // Debounce: não validar mais de uma vez a cada 5 min
+    const agora = Date.now();
+    if(state.ultimaValidacaoPush && (agora - state.ultimaValidacaoPush) < INTERVALO_DEBOUNCE_VALIDACAO){
+      return;
+    }
+    state.ultimaValidacaoPush = agora;
+
+    const endpoint = state.pushSubscription.endpoint;
+    if(!endpoint) return;
+
+    try{
+      const resp = await fetch(urlBase("/push/test"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": state.apiKey
+        },
+        body: JSON.stringify({
+          endpoint: endpoint,
+          deviceId: state.deviceId
+        })
+      });
+
+      // Se a rota não existir (404) — backend antigo, ignora silenciosamente
+      if(resp.status === 404){
+        console.log("[push] validar: endpoint /push/test não existe no backend (ok, ignorando)");
+        return;
+      }
+
+      const data = await resp.json().catch(() => ({}));
+
+      if(!resp.ok){
+        console.warn("[push] validar: erro HTTP", resp.status);
+        return;
+      }
+
+      if(data.entregue === true){
+        console.log("[push] validar: OK — subscription funcional");
+        esconderAvisoPush();
+        return;
+      }
+
+      // entregue === false → subscription expirada ou erro temporário
+      console.warn("[push] validar: subscription NÃO entregou — motivo:", data.motivo);
+
+      // Só tenta renovar se for caso de expiração (não de erro temporário)
+      if(data.motivo === "expirada" || data.motivo === "marcada-inativa"){
+        console.log("[push] validar: tentando renovar subscription");
+
+        // Limpa referência local (força rerenovação)
+        state.pushSubscription = null;
+        state.pushAtivo = false;
+
+        // Tenta renovar
+        await verificarErenovarSubscription({ forcar: true });
+
+        if(state.pushSubscription){
+          console.log("[push] validar: renovação OK — nova subscription ativa");
+          esconderAvisoPush();
+        } else {
+          console.warn("[push] validar: renovação FALHOU — mostrando banner");
+          mostrarAvisoPush();
+        }
+      }
+      // Se for "nao-cadastrada" → reenvia para cadastrar
+      else if(data.motivo === "nao-cadastrada"){
+        console.log("[push] validar: subscription não estava no backend — reenviando");
+        await reenviarSubscription(state.pushSubscription);
+      }
+      // "erro-temporario" → não faz nada, tenta de novo no próximo boot
+
+    }catch(e){
+      // Silencioso — falha de rede, timeout, etc
+      console.warn("[push] validar: erro de rede —", e.message);
     }
   }
 
@@ -3346,6 +3447,7 @@
 
   /* =========================================================
      VISIBILITY CHANGE
+     ✅ Fase 2 — revalida push ao voltar ao app (debounce interno)
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
@@ -3354,6 +3456,9 @@
       if(state.pushSubscription){
         reenviarSubscription(state.pushSubscription);
       }
+
+      // ✅ Fase 2 — valida de novo quando volta ao app
+      validarPushAtivo();
 
       if(state.telefoneAtual){
         carregarConversa({ silencioso: true });
@@ -3416,13 +3521,14 @@
 
   /* =========================================================
      BOOT
+     ✅ Fase 2 — chama validarPushAtivo() após renovação
      ========================================================= */
   async function boot(){
     loadConfig();
     configurarListenersTema();
     atualizarTemaUI();
 
-    console.log("[boot] Mila Whats iniciando — deviceId:", state.deviceId);
+    console.log("[boot] Mila Whats v1.9.2 iniciando — deviceId:", state.deviceId);
 
     try{
       if(!history.state){
@@ -3440,6 +3546,7 @@
       try{
         state.swRegistration = await registrarServiceWorker();
         await verificarErenovarSubscription({ forcar: true });
+        await validarPushAtivo();   // ✅ Fase 2
       }catch(e){}
     }
 
