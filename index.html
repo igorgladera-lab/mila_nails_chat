@@ -406,42 +406,7 @@
     overscroll-behavior:contain;
     transition:top .15s;
   }
-   .chat-sep-dia{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  margin:14px 8px 10px;
-  color:var(--muted);
-  font-size:11px;
-  font-weight:700;
-  letter-spacing:.6px;
-  text-transform:uppercase;
-  user-select:none;
-}
-.chat-sep-dia::before,
-.chat-sep-dia::after{
-  content:"";
-  flex:1;
-  height:1px;
-  background:rgba(0,0,0,.08);
-}
-html[data-theme="dark"] .chat-sep-dia::before,
-html[data-theme="dark"] .chat-sep-dia::after{
-  background:rgba(255,255,255,.1);
-}
-.chat-sep-dia .chat-sep-texto{
-  background:var(--surface);
-  padding:5px 12px;
-  border-radius:12px;
-  box-shadow:0 1px 2px rgba(0,0,0,.06);
-  color:var(--text);
-  font-weight:600;
-  letter-spacing:.3px;
-  text-transform:none;
-}
-html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
-  box-shadow:0 1px 2px rgba(0,0,0,.3);
-}
+
   .chat-aviso-24h{
     background:var(--aviso-24h);
     border:1px solid var(--aviso-24h-borda);
@@ -715,6 +680,221 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
     display:block;
   }
 
+  /* =========================================================
+     ✅ v1.9.4 — Respostas rápidas
+     ========================================================= */
+  .chat-input-bar{
+    flex-direction:column;
+    align-items:stretch;
+    padding:0 0 env(safe-area-inset-bottom);
+    gap:0;
+  }
+
+  .chat-input-bar .respostas-rapidas{
+    display:flex;
+    gap:6px;
+    padding:6px 8px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    border-bottom:1px solid var(--border);
+    background:var(--surface);
+    flex:0 0 auto;
+  }
+  .chat-input-bar .respostas-rapidas::-webkit-scrollbar{ display:none; }
+  .chat-input-bar .respostas-rapidas.escondido{ display:none; }
+
+  .chat-input-bar .rr-btn{
+    flex:0 0 auto;
+    background:var(--btn-bg);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:6px 12px;
+    font-size:13px;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    white-space:nowrap;
+    max-width:220px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    transition:background .15s, transform .1s, color .15s;
+    line-height:1.2;
+  }
+  .chat-input-bar .rr-btn:active{
+    background:var(--primary);
+    color:#fff;
+    border-color:var(--primary);
+    transform:scale(.96);
+  }
+
+  .chat-input-bar .input-linha{
+    display:flex;
+    align-items:flex-end;
+    gap:6px;
+    padding:8px;
+    width:100%;
+    box-sizing:border-box;
+  }
+
+  /* Ajuste do chat-container pra acomodar a barra maior */
+  #telaConversa .chat-container{
+    bottom:calc(108px + env(safe-area-inset-bottom));
+  }
+
+  /* =========================================================
+     ✅ v1.9.4 — Bloco de config das respostas rápidas
+     ========================================================= */
+  .rr-bloco{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:16px;
+    background:var(--input-bg-alt);
+  }
+  .rr-bloco .rr-titulo{
+    font-size:13px;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:6px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .rr-bloco .rr-sub{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.4;
+    margin-bottom:12px;
+  }
+
+  .rr-lista{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:12px;
+  }
+
+  .rr-item{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 10px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    min-height:38px;
+  }
+  .rr-item .rr-item-texto{
+    flex:1;
+    min-width:0;
+    font-size:13px;
+    color:var(--text);
+    line-height:1.3;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rr-item .rr-item-btn{
+    flex:0 0 auto;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:16px;
+    cursor:pointer;
+    padding:4px 6px;
+    line-height:1;
+    border-radius:6px;
+    transition:background .15s, color .15s;
+  }
+  .rr-item .rr-item-btn:hover{
+    background:var(--btn-active);
+    color:var(--text);
+  }
+  .rr-item .rr-item-btn.editar{ color:var(--primary); }
+  .rr-item .rr-item-btn.excluir{ color:#c62828; }
+
+  html[data-theme="dark"] .rr-item .rr-item-btn.excluir{ color:#ef5350; }
+
+  .rr-lista .rr-vazia{
+    font-size:12px;
+    color:var(--muted);
+    font-style:italic;
+    padding:8px 4px;
+    text-align:center;
+  }
+
+  .rr-acoes{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .rr-btn-add,
+  .rr-btn-restaurar{
+    width:100%;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:10px;
+    font-size:13px;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    transition:background .15s, opacity .15s;
+  }
+  .rr-btn-add:active{ background:var(--primary-dark); }
+
+  .rr-btn-restaurar{
+    background:var(--btn-bg);
+    color:var(--text);
+  }
+  .rr-btn-restaurar:active{ background:var(--btn-active); }
+
+  .rr-btn-add:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
+  /* =========================================================
+     ✅ v1.9.4 — Sub-overlay de resposta rápida
+     ========================================================= */
+  .rr-form-counter{
+    font-size:11px;
+    color:var(--muted);
+    text-align:right;
+    margin-top:4px;
+  }
+  .rr-form-counter.limite{
+    color:#c62828;
+    font-weight:700;
+  }
+
+  .rr-emojis{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:6px;
+    margin-top:8px;
+  }
+  .rr-emojis .rr-emoji{
+    background:var(--btn-bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    font-size:20px;
+    cursor:pointer;
+    font-family:inherit;
+    transition:background .15s, transform .1s;
+    line-height:1;
+  }
+  .rr-emojis .rr-emoji:active{
+    background:var(--btn-active);
+    transform:scale(.94);
+  }
+
   .chat-input-bar.gravando{
     background:var(--gravando);
     border-top-color:var(--gravando);
@@ -722,7 +902,8 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
 
   .chat-input-bar.gravando .btn-icone,
   .chat-input-bar.gravando .btn-enviar,
-  .chat-input-bar.gravando textarea{
+  .chat-input-bar.gravando textarea,
+  .chat-input-bar.gravando .respostas-rapidas{
     display:none !important;
   }
 
@@ -1212,34 +1393,37 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
   <div class="chat-container" id="chatContainer"></div>
 
   <div class="chat-input-bar" id="chatInputBar">
-    <button class="btn-icone" id="btnAnexar" aria-label="Enviar imagem" disabled>
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-      </svg>
-    </button>
-    <input type="file" id="inputFile" accept="image/jpeg,image/png,image/webp" style="display:none">
+    <div class="respostas-rapidas" id="respostasRapidas"></div>
+    <div class="input-linha">
+      <button class="btn-icone" id="btnAnexar" aria-label="Enviar imagem" disabled>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
+      <input type="file" id="inputFile" accept="image/jpeg,image/png,image/webp" style="display:none">
 
-    <textarea id="inputMensagem" placeholder="Digite uma mensagem..." rows="1"></textarea>
+      <textarea id="inputMensagem" placeholder="Digite uma mensagem..." rows="1"></textarea>
 
-    <button class="btn-icone" id="btnGravar" aria-label="Gravar áudio" disabled>
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
-        <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z"/>
-        <path d="M19 11a1 1 0 1 0-2 0 5 5 0 1 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/>
-      </svg>
-    </button>
+      <button class="btn-icone" id="btnGravar" aria-label="Gravar áudio" disabled>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+          <path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3z"/>
+          <path d="M19 11a1 1 0 1 0-2 0 5 5 0 1 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/>
+        </svg>
+      </button>
 
-    <button class="btn-enviar" id="btnEnviar" aria-label="Enviar" disabled>
-      <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
-        <path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.4.92v5.6c0 .5.37.92.86.99L14 12 2.86 12.89a1 1 0 0 0-.86.99v5.6a1 1 0 0 0 1.4.92z"/>
-      </svg>
-    </button>
+      <button class="btn-enviar" id="btnEnviar" aria-label="Enviar" disabled>
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+          <path d="M3.4 20.4l17.45-7.48a1 1 0 0 0 0-1.84L3.4 3.6a1 1 0 0 0-1.4.92v5.6c0 .5.37.92.86.99L14 12 2.86 12.89a1 1 0 0 0-.86.99v5.6a1 1 0 0 0 1.4.92z"/>
+        </svg>
+      </button>
 
-    <div class="gravando-ui" id="gravandoUI">
-      <span class="pisca"></span>
-      <span>Gravando áudio...</span>
-      <span class="tempo-grav" id="tempoGrav">0:00</span>
-      <button class="btn-cancelar-grav" id="btnCancelarGrav" type="button">✕</button>
-      <button class="btn-parar-grav" id="btnPararGrav" type="button">Enviar</button>
+      <div class="gravando-ui" id="gravandoUI">
+        <span class="pisca"></span>
+        <span>Gravando áudio...</span>
+        <span class="tempo-grav" id="tempoGrav">0:00</span>
+        <button class="btn-cancelar-grav" id="btnCancelarGrav" type="button">✕</button>
+        <button class="btn-parar-grav" id="btnPararGrav" type="button">Enviar</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1297,6 +1481,17 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
         <button class="push-btn secundario" id="btnRenovarPush" type="button">🔄 Renovar push</button>
       </div>
 
+      <!-- ✅ v1.9.4 — Respostas rápidas -->
+      <div class="rr-bloco">
+        <div class="rr-titulo">💬 Respostas rápidas</div>
+        <div class="rr-sub">Mensagens prontas que aparecem acima do campo de texto no chat.</div>
+        <div class="rr-lista" id="rrListaConfig"></div>
+        <div class="rr-acoes">
+          <button class="rr-btn-add" id="rrBtnAdd" type="button">+ Adicionar</button>
+          <button class="rr-btn-restaurar" id="rrBtnRestaurar" type="button">🔄 Restaurar padrão</button>
+        </div>
+      </div>
+
       <div class="backup-bloco">
         <div class="backup-titulo">💾 Backup</div>
         <div class="backup-sub">Salve a configuração do app em um arquivo. As conversas ficam seguras na nuvem.</div>
@@ -1333,6 +1528,45 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
   </div>
 </div>
 
+<!-- ✅ v1.9.4 — Sub-overlay: editar/adicionar resposta rápida -->
+<div class="overlay" id="overlayRespRapida">
+  <div class="sheet">
+    <div class="sheet-header">
+      <div class="sheet-title" id="rrFormTitulo">Nova resposta</div>
+      <button class="sheet-close" data-close="overlayRespRapida">✕</button>
+    </div>
+    <div class="sheet-body">
+      <div class="form-group">
+        <label for="rrFormTexto">Texto</label>
+        <input type="text" id="rrFormTexto" placeholder="Ex: ✅ Confirmado!" maxlength="100" autocomplete="off">
+        <div class="rr-form-counter" id="rrFormCounter">0/100</div>
+      </div>
+
+      <div class="form-group">
+        <label>Sugestões de emoji</label>
+        <div class="rr-emojis" id="rrEmojis">
+          <button class="rr-emoji" type="button" data-emoji="✅">✅</button>
+          <button class="rr-emoji" type="button" data-emoji="🕐">🕐</button>
+          <button class="rr-emoji" type="button" data-emoji="📅">📅</button>
+          <button class="rr-emoji" type="button" data-emoji="💅">💅</button>
+          <button class="rr-emoji" type="button" data-emoji="👍">👍</button>
+          <button class="rr-emoji" type="button" data-emoji="💖">💖</button>
+          <button class="rr-emoji" type="button" data-emoji="🏠">🏠</button>
+          <button class="rr-emoji" type="button" data-emoji="📍">📍</button>
+          <button class="rr-emoji" type="button" data-emoji="🎉">🎉</button>
+          <button class="rr-emoji" type="button" data-emoji="🕒">🕒</button>
+          <button class="rr-emoji" type="button" data-emoji="💬">💬</button>
+          <button class="rr-emoji" type="button" data-emoji="⭐">⭐</button>
+        </div>
+      </div>
+    </div>
+    <div class="sheet-footer">
+      <button class="btn btn-secondary" data-close="overlayRespRapida">Cancelar</button>
+      <button class="btn btn-primary" id="rrBtnSalvarForm">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -1340,6 +1574,19 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
   const LS_CONFIG    = "mila_whats_config";
   const LS_TEMA      = "mila_whats_tema";
   const LS_DEVICE_ID = "mila_whats_device_id";
+
+  /* ✅ v1.9.4 — respostas rápidas */
+  const LS_RESPOSTAS_RAPIDAS = "mila_whats_respostas_rapidas";
+  const RR_LIMITE_ITENS = 12;
+  const RR_LIMITE_CHARS = 100;
+
+  const RR_PADRAO = [
+    { texto: "✅ Confirmado!" },
+    { texto: "🕐 Vou verificar e já te aviso" },
+    { texto: "📅 Podemos remarcar?" },
+    { texto: "💅 Te espero amanhã!" },
+    { texto: "👍 Ok!" }
+  ];
 
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
@@ -1362,6 +1609,10 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
     backendUrl: "",
     apiKey: "",
 
+    /* ✅ v1.9.4 */
+    respostasRapidas: [],
+    rrEditandoId: null,
+
     conversas: [],
     carregando: false,
     erro: null,
@@ -1383,7 +1634,7 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
     pushSuportado: false,
     pushAtivo: false,
     ultimaVerificacaoPush: 0,
-    ultimaValidacaoPush: 0,   // ✅ Fase 2
+    ultimaValidacaoPush: 0,
     ultimaRenovacaoPush: 0,
     deviceId: "",
 
@@ -1401,8 +1652,6 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
 
   /* =========================================================
      deviceId — identifica este dispositivo de forma única
-     Gerado uma vez e persistido em localStorage.
-     Sobrevive a fechar/reabrir o app.
      ========================================================= */
   function gerarDeviceId(){
     return "dev_" +
@@ -1429,7 +1678,7 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
   }
 
   /* =========================================================
-     PERSISTÊNCIA
+     PERSISTÊNCIA — config
      ========================================================= */
   function loadConfig(){
     try{
@@ -1460,7 +1709,68 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
   }
 
   /* =========================================================
-     TEMA (claro / escuro / sistema)
+     ✅ v1.9.4 — RESPOSTAS RÁPIDAS (persistência)
+     ========================================================= */
+  function gerarIdRR(){
+    return "rr_" + Date.now().toString(36) + "_" +
+           Math.random().toString(36).slice(2, 8);
+  }
+
+  function normalizarRespostaRR(item){
+    if(!item || typeof item !== "object") return null;
+    const texto = String(item.texto || "").trim().slice(0, RR_LIMITE_CHARS);
+    if(!texto) return null;
+    return {
+      id: item.id && String(item.id).trim() ? String(item.id).trim() : gerarIdRR(),
+      texto: texto
+    };
+  }
+
+  function carregarRespostasRapidas(){
+    let itens = [];
+
+    try{
+      const raw = JSON.parse(localStorage.getItem(LS_RESPOSTAS_RAPIDAS) || "null");
+
+      if(raw && typeof raw === "object" && Array.isArray(raw.itens)){
+        itens = raw.itens
+          .map(normalizarRespostaRR)
+          .filter(x => !!x)
+          .slice(0, RR_LIMITE_ITENS);
+      } else {
+        itens = RR_PADRAO
+          .map(x => normalizarRespostaRR(x))
+          .filter(x => !!x);
+      }
+    }catch(e){
+      itens = RR_PADRAO
+        .map(x => normalizarRespostaRR(x))
+        .filter(x => !!x);
+    }
+
+    state.respostasRapidas = itens;
+  }
+
+  function salvarRespostasRapidas(){
+    try{
+      localStorage.setItem(LS_RESPOSTAS_RAPIDAS, JSON.stringify({
+        versao: 1,
+        itens: state.respostasRapidas
+      }));
+    }catch(e){
+      console.warn("[rr] falha ao salvar:", e.message);
+    }
+  }
+
+  function restaurarRespostasPadrao(){
+    state.respostasRapidas = RR_PADRAO
+      .map(x => normalizarRespostaRR(x))
+      .filter(x => !!x);
+    salvarRespostasRapidas();
+  }
+
+  /* =========================================================
+     TEMA
      ========================================================= */
   function temaSalvo(){
     try{
@@ -1567,58 +1877,7 @@ html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
     if(partes.length === 1) return partes[0].slice(0, 2).toUpperCase();
     return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
   }
-  /* =========================================================
-   SEPARADOR DE DIA — texto exibido entre grupos de mensagens
-   Retorna "Hoje", "Ontem" ou "Dia da semana, DD/MM[/AAAA]"
-   ========================================================= */
-const DIAS_SEMANA_PT = [
-  "Domingo",
-  "Segunda-feira",
-  "Terça-feira",
-  "Quarta-feira",
-  "Quinta-feira",
-  "Sexta-feira",
-  "Sábado"
-];
 
-function formatarDiaSeparador(iso){
-  if(!iso) return "";
-
-  const d = new Date(iso);
-  if(isNaN(d.getTime())) return "";
-
-  const agora = new Date();
-
-  // Zera horas para comparar só a data (dia local)
-  const dDia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-
-  const diffDias = Math.round((hoje - dDia) / (24 * 60 * 60 * 1000));
-
-  if(diffDias === 0) return "Hoje";
-  if(diffDias === 1) return "Ontem";
-
-  const diaSemana = DIAS_SEMANA_PT[d.getDay()];
-  const dia = String(d.getDate()).padStart(2, "0");
-  const mes = String(d.getMonth() + 1).padStart(2, "0");
-
-  // Se for do mesmo ano, omite o ano
-  const mesmoAno = d.getFullYear() === agora.getFullYear();
-  const sufixoAno = mesmoAno ? "" : "/" + d.getFullYear();
-
-  return diaSemana + ", " + dia + "/" + mes + sufixoAno;
-}
-
-/* Compara se duas mensagens são do mesmo dia (dia local) */
-function mesmoDiaLocal(isoA, isoB){
-  if(!isoA || !isoB) return false;
-  const a = new Date(isoA);
-  const b = new Date(isoB);
-  if(isNaN(a.getTime()) || isNaN(b.getTime())) return false;
-  return a.getFullYear() === b.getFullYear()
-      && a.getMonth()    === b.getMonth()
-      && a.getDate()     === b.getDate();
-}
   function formatarHorario(iso){
     if(!iso) return "";
     const d = new Date(iso);
@@ -1690,6 +1949,55 @@ function mesmoDiaLocal(isoA, isoB){
     if(tipo === "voice") return "🎤 Mensagem de voz";
     if(tipo === "template") return formatarTextoTemplate(txt) || txt;
     return txt;
+  }
+
+  /* =========================================================
+     SEPARADOR DE DIA
+     ========================================================= */
+  const DIAS_SEMANA_PT = [
+    "Domingo",
+    "Segunda-feira",
+    "Terça-feira",
+    "Quarta-feira",
+    "Quinta-feira",
+    "Sexta-feira",
+    "Sábado"
+  ];
+
+  function formatarDiaSeparador(iso){
+    if(!iso) return "";
+
+    const d = new Date(iso);
+    if(isNaN(d.getTime())) return "";
+
+    const agora = new Date();
+
+    const dDia = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const hoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+
+    const diffDias = Math.round((hoje - dDia) / (24 * 60 * 60 * 1000));
+
+    if(diffDias === 0) return "Hoje";
+    if(diffDias === 1) return "Ontem";
+
+    const diaSemana = DIAS_SEMANA_PT[d.getDay()];
+    const dia = String(d.getDate()).padStart(2, "0");
+    const mes = String(d.getMonth() + 1).padStart(2, "0");
+
+    const mesmoAno = d.getFullYear() === agora.getFullYear();
+    const sufixoAno = mesmoAno ? "" : "/" + d.getFullYear();
+
+    return diaSemana + ", " + dia + "/" + mes + sufixoAno;
+  }
+
+  function mesmoDiaLocal(isoA, isoB){
+    if(!isoA || !isoB) return false;
+    const a = new Date(isoA);
+    const b = new Date(isoB);
+    if(isNaN(a.getTime()) || isNaN(b.getTime())) return false;
+    return a.getFullYear() === b.getFullYear()
+        && a.getMonth()    === b.getMonth()
+        && a.getDate()     === b.getDate();
   }
 
   /* =========================================================
@@ -1837,7 +2145,6 @@ function mesmoDiaLocal(isoA, isoB){
   async function reenviarSubscription(sub){
     if(!sub || !temConfig()) return;
 
-    // Garante que sempre temos um deviceId
     if(!state.deviceId){
       state.deviceId = obterOuCriarDeviceId();
       console.log("[device] deviceId (recriado):", state.deviceId);
@@ -1929,26 +2236,18 @@ function mesmoDiaLocal(isoA, isoB){
   }
 
   /* =========================================================
-     ✅ FASE 2 — validação ativa de push
-     Pergunta ao backend se a subscription atual ainda funciona.
-     Se não funcionar, tenta renovar silenciosamente.
-     Roda no boot, silencioso, com debounce de 5 minutos.
+     ✅ Fase 2 — validação ativa de push
      ========================================================= */
   async function validarPushAtivo(){
-    // Sem SW registrado → nada a validar
     if(!state.swRegistration) return;
-
-    // Sem config → nada a validar
     if(!temConfig()) return;
 
-    // Sem subscription local → tenta renovar (talvez a permissão esteja granted)
     if(!state.pushSubscription){
       console.log("[push] validar: sem subscription local — tentando renovar");
       await verificarErenovarSubscription({ forcar: true });
       if(!state.pushSubscription) return;
     }
 
-    // Debounce: não validar mais de uma vez a cada 5 min
     const agora = Date.now();
     if(state.ultimaValidacaoPush && (agora - state.ultimaValidacaoPush) < INTERVALO_DEBOUNCE_VALIDACAO){
       return;
@@ -1971,7 +2270,6 @@ function mesmoDiaLocal(isoA, isoB){
         })
       });
 
-      // Se a rota não existir (404) — backend antigo, ignora silenciosamente
       if(resp.status === 404){
         console.log("[push] validar: endpoint /push/test não existe no backend (ok, ignorando)");
         return;
@@ -1990,18 +2288,14 @@ function mesmoDiaLocal(isoA, isoB){
         return;
       }
 
-      // entregue === false → subscription expirada ou erro temporário
       console.warn("[push] validar: subscription NÃO entregou — motivo:", data.motivo);
 
-      // Só tenta renovar se for caso de expiração (não de erro temporário)
       if(data.motivo === "expirada" || data.motivo === "marcada-inativa"){
         console.log("[push] validar: tentando renovar subscription");
 
-        // Limpa referência local (força rerenovação)
         state.pushSubscription = null;
         state.pushAtivo = false;
 
-        // Tenta renovar
         await verificarErenovarSubscription({ forcar: true });
 
         if(state.pushSubscription){
@@ -2012,15 +2306,12 @@ function mesmoDiaLocal(isoA, isoB){
           mostrarAvisoPush();
         }
       }
-      // Se for "nao-cadastrada" → reenvia para cadastrar
       else if(data.motivo === "nao-cadastrada"){
         console.log("[push] validar: subscription não estava no backend — reenviando");
         await reenviarSubscription(state.pushSubscription);
       }
-      // "erro-temporario" → não faz nada, tenta de novo no próximo boot
 
     }catch(e){
-      // Silencioso — falha de rede, timeout, etc
       console.warn("[push] validar: erro de rede —", e.message);
     }
   }
@@ -2661,7 +2952,7 @@ function mesmoDiaLocal(isoA, isoB){
       `;
     }
 
-        if(state.mensagens.length === 0){
+    if(state.mensagens.length === 0){
       html += `
         <div style="text-align:center;color:var(--muted);font-size:13px;padding:40px 16px;">
           Nenhuma mensagem ainda.
@@ -2671,9 +2962,7 @@ function mesmoDiaLocal(isoA, isoB){
       let ultimaDataISO = null;
 
       state.mensagens.forEach(m => {
-        // Só insere separador se a mensagem tem data
         if(m.enviado_em){
-          // Primeira mensagem OU mudou de dia em relação à anterior
           if(!ultimaDataISO || !mesmoDiaLocal(ultimaDataISO, m.enviado_em)){
             const textoDia = formatarDiaSeparador(m.enviado_em);
             if(textoDia){
@@ -2698,6 +2987,7 @@ function mesmoDiaLocal(isoA, isoB){
     }, 50);
 
     hidratarMidias();
+    renderBarraRespostasRapidas();
   }
 
   function renderBubble(m){
@@ -2812,6 +3102,130 @@ function mesmoDiaLocal(isoA, isoB){
       html += `<span class="barra" style="height:${alt}%"></span>`;
     }
     return html;
+  }
+
+  /* =========================================================
+     ✅ v1.9.4 — RENDER: barra + lista de respostas rápidas
+     ========================================================= */
+  function renderBarraRespostasRapidas(){
+    const barra = document.getElementById("respostasRapidas");
+    if(!barra) return;
+
+    const itens = state.respostasRapidas || [];
+
+    if(itens.length === 0 || !state.janelaAberta || state.gravando){
+      barra.classList.add("escondido");
+      barra.innerHTML = "";
+      return;
+    }
+
+    let html = "";
+    itens.forEach(item => {
+      html += `<button class="rr-btn" type="button" data-rr-id="${escapeHtml(item.id)}">${escapeHtml(item.texto)}</button>`;
+    });
+
+    barra.innerHTML = html;
+    barra.classList.remove("escondido");
+  }
+
+  function renderListaRespostasConfig(){
+    const lista = document.getElementById("rrListaConfig");
+    const btnAdd = document.getElementById("rrBtnAdd");
+    if(!lista || !btnAdd) return;
+
+    const itens = state.respostasRapidas || [];
+
+    btnAdd.disabled = (itens.length >= RR_LIMITE_ITENS);
+
+    if(itens.length === 0){
+      lista.innerHTML = `<div class="rr-vazia">Nenhuma resposta configurada.</div>`;
+      return;
+    }
+
+    let html = "";
+    itens.forEach(item => {
+      html += `
+        <div class="rr-item" data-rr-id="${escapeHtml(item.id)}">
+          <span class="rr-item-texto">${escapeHtml(item.texto)}</span>
+          <button class="rr-item-btn editar" type="button" data-acao="editar" data-rr-id="${escapeHtml(item.id)}" aria-label="Editar">✏️</button>
+          <button class="rr-item-btn excluir" type="button" data-acao="excluir" data-rr-id="${escapeHtml(item.id)}" aria-label="Excluir">🗑️</button>
+        </div>
+      `;
+    });
+    lista.innerHTML = html;
+  }
+
+  /* =========================================================
+     ✅ v1.9.4 — Form: abrir/salvar resposta rápida
+     ========================================================= */
+  function abrirFormRespostaRapida(idExistente){
+    const overlay = document.getElementById("overlayRespRapida");
+    const titulo = document.getElementById("rrFormTitulo");
+    const input = document.getElementById("rrFormTexto");
+    const counter = document.getElementById("rrFormCounter");
+
+    if(!overlay || !titulo || !input || !counter) return;
+
+    if(idExistente){
+      const item = state.respostasRapidas.find(x => x.id === idExistente);
+      if(!item){
+        state.rrEditandoId = null;
+        titulo.textContent = "Nova resposta";
+        input.value = "";
+      } else {
+        state.rrEditandoId = idExistente;
+        titulo.textContent = "Editar resposta";
+        input.value = item.texto;
+      }
+    } else {
+      state.rrEditandoId = null;
+      titulo.textContent = "Nova resposta";
+      input.value = "";
+    }
+
+    counter.textContent = input.value.length + "/" + RR_LIMITE_CHARS;
+    counter.classList.toggle("limite", input.value.length >= RR_LIMITE_CHARS);
+
+    openOverlay("overlayRespRapida");
+
+    setTimeout(() => {
+      try{ input.focus(); }catch(e){}
+    }, 120);
+  }
+
+  function salvarFormRespostaRapida(){
+    const input = document.getElementById("rrFormTexto");
+    if(!input) return;
+
+    const texto = String(input.value || "").trim().slice(0, RR_LIMITE_CHARS);
+
+    if(!texto){
+      alert("Digite o texto da resposta.");
+      return;
+    }
+
+    if(state.rrEditandoId){
+      const idx = state.respostasRapidas.findIndex(x => x.id === state.rrEditandoId);
+      if(idx >= 0){
+        state.respostasRapidas[idx].texto = texto;
+      }
+    } else {
+      if(state.respostasRapidas.length >= RR_LIMITE_ITENS){
+        alert("Limite de " + RR_LIMITE_ITENS + " respostas atingido.");
+        return;
+      }
+      state.respostasRapidas.push({
+        id: gerarIdRR(),
+        texto: texto
+      });
+    }
+
+    salvarRespostasRapidas();
+    renderListaRespostasConfig();
+    renderBarraRespostasRapidas();
+
+    state.rrEditandoId = null;
+    closeOverlay("overlayRespRapida");
   }
 
   /* =========================================================
@@ -3298,6 +3712,7 @@ function mesmoDiaLocal(isoA, isoB){
 
     document.getElementById("chatInputBar").classList.remove("gravando");
     pararStreamAudio();
+    renderBarraRespostasRapidas();
   }
 
   async function finalizarGravacaoEEnviar(){
@@ -3327,6 +3742,7 @@ function mesmoDiaLocal(isoA, isoB){
     }
     document.getElementById("chatInputBar").classList.remove("gravando");
     pararStreamAudio();
+    renderBarraRespostasRapidas();
 
     if(!chunks.length){
       alert("Gravação vazia. Tente novamente.");
@@ -3421,6 +3837,7 @@ function mesmoDiaLocal(isoA, isoB){
     document.getElementById("cfgApiKey").value = state.apiKey || "";
     atualizarPushUI();
     atualizarTemaUI();
+    renderListaRespostasConfig();
     openOverlay("overlayConfig");
   });
 
@@ -3467,6 +3884,124 @@ function mesmoDiaLocal(isoA, isoB){
   });
 
   /* =========================================================
+     ✅ v1.9.4 — EVENTOS: respostas rápidas
+     ========================================================= */
+
+  // Clique em um botão da barra → preenche o input
+  document.getElementById("respostasRapidas").addEventListener("click", (e) => {
+    const btn = e.target.closest(".rr-btn");
+    if(!btn) return;
+
+    const id = btn.getAttribute("data-rr-id");
+    const item = state.respostasRapidas.find(x => x.id === id);
+    if(!item) return;
+
+    const input = document.getElementById("inputMensagem");
+    const btnEnviar = document.getElementById("btnEnviar");
+    if(!input || !btnEnviar) return;
+
+    input.value = item.texto;
+
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 100) + "px";
+
+    btnEnviar.disabled = false;
+
+    try{ input.focus(); }catch(err){}
+  });
+
+  // Clique na lista de config (editar ou excluir)
+  document.getElementById("rrListaConfig").addEventListener("click", (e) => {
+    const btn = e.target.closest(".rr-item-btn");
+    if(!btn) return;
+
+    const acao = btn.getAttribute("data-acao");
+    const id = btn.getAttribute("data-rr-id");
+    if(!id) return;
+
+    const item = state.respostasRapidas.find(x => x.id === id);
+    if(!item) return;
+
+    if(acao === "editar"){
+      abrirFormRespostaRapida(id);
+      return;
+    }
+
+    if(acao === "excluir"){
+      if(confirm('Excluir "' + item.texto + '"?')){
+        state.respostasRapidas = state.respostasRapidas.filter(x => x.id !== id);
+        salvarRespostasRapidas();
+        renderListaRespostasConfig();
+        renderBarraRespostasRapidas();
+      }
+      return;
+    }
+  });
+
+  // Botão "+ Adicionar"
+  document.getElementById("rrBtnAdd").addEventListener("click", () => {
+    if(state.respostasRapidas.length >= RR_LIMITE_ITENS){
+      alert("Limite de " + RR_LIMITE_ITENS + " respostas atingido.");
+      return;
+    }
+    abrirFormRespostaRapida(null);
+  });
+
+  // Botão "🔄 Restaurar padrão"
+  document.getElementById("rrBtnRestaurar").addEventListener("click", () => {
+    if(confirm("Restaurar as respostas padrão? Suas personalizações serão perdidas.")){
+      restaurarRespostasPadrao();
+      renderListaRespostasConfig();
+      renderBarraRespostasRapidas();
+    }
+  });
+
+  // Form: contador de caracteres
+  document.getElementById("rrFormTexto").addEventListener("input", (e) => {
+    const len = String(e.target.value || "").length;
+    const counter = document.getElementById("rrFormCounter");
+    if(!counter) return;
+    counter.textContent = len + "/" + RR_LIMITE_CHARS;
+    counter.classList.toggle("limite", len >= RR_LIMITE_CHARS);
+  });
+
+  // Form: clique em emoji insere no final
+  document.getElementById("rrEmojis").addEventListener("click", (e) => {
+    const btn = e.target.closest(".rr-emoji");
+    if(!btn) return;
+
+    const emoji = btn.getAttribute("data-emoji") || "";
+    const input = document.getElementById("rrFormTexto");
+    if(!input) return;
+
+    const atual = input.value || "";
+    if(atual.length + emoji.length > RR_LIMITE_CHARS){
+      return;
+    }
+
+    input.value = atual + emoji;
+    const len = input.value.length;
+    const counter = document.getElementById("rrFormCounter");
+    if(counter){
+      counter.textContent = len + "/" + RR_LIMITE_CHARS;
+      counter.classList.toggle("limite", len >= RR_LIMITE_CHARS);
+    }
+
+    try{ input.focus(); }catch(err){}
+  });
+
+  // Form: botão Salvar
+  document.getElementById("rrBtnSalvarForm").addEventListener("click", salvarFormRespostaRapida);
+
+  // Form: Enter também salva
+  document.getElementById("rrFormTexto").addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      e.preventDefault();
+      salvarFormRespostaRapida();
+    }
+  });
+
+  /* =========================================================
      EVENTOS: BANNER DE AVISO DE PUSH
      ========================================================= */
   document.getElementById("btnFecharAvisoPush").addEventListener("click", () => {
@@ -3479,6 +4014,7 @@ function mesmoDiaLocal(isoA, isoB){
     document.getElementById("cfgApiKey").value = state.apiKey || "";
     atualizarPushUI();
     atualizarTemaUI();
+    renderListaRespostasConfig();
     openOverlay("overlayConfig");
   });
 
@@ -3492,6 +4028,7 @@ function mesmoDiaLocal(isoA, isoB){
     document.getElementById("cfgApiKey").value = state.apiKey || "";
     atualizarPushUI();
     atualizarTemaUI();
+    renderListaRespostasConfig();
     openOverlay("overlayConfig");
   });
 
@@ -3551,7 +4088,6 @@ function mesmoDiaLocal(isoA, isoB){
 
   /* =========================================================
      VISIBILITY CHANGE
-     ✅ Fase 2 — revalida push ao voltar ao app (debounce interno)
      ========================================================= */
   document.addEventListener("visibilitychange", () => {
     if(document.visibilityState === "visible" && temConfig()){
@@ -3561,7 +4097,6 @@ function mesmoDiaLocal(isoA, isoB){
         reenviarSubscription(state.pushSubscription);
       }
 
-      // ✅ Fase 2 — valida de novo quando volta ao app
       validarPushAtivo();
 
       if(state.telefoneAtual){
@@ -3625,14 +4160,14 @@ function mesmoDiaLocal(isoA, isoB){
 
   /* =========================================================
      BOOT
-     ✅ Fase 2 — chama validarPushAtivo() após renovação
      ========================================================= */
   async function boot(){
     loadConfig();
+    carregarRespostasRapidas();
     configurarListenersTema();
     atualizarTemaUI();
 
-    console.log("[boot] Mila Whats v1.9.2 iniciando — deviceId:", state.deviceId);
+    console.log("[boot] Mila Whats v1.9.4 iniciando — deviceId:", state.deviceId);
 
     try{
       if(!history.state){
@@ -3650,7 +4185,7 @@ function mesmoDiaLocal(isoA, isoB){
       try{
         state.swRegistration = await registrarServiceWorker();
         await verificarErenovarSubscription({ forcar: true });
-        await validarPushAtivo();   // ✅ Fase 2
+        await validarPushAtivo();
       }catch(e){}
     }
 
