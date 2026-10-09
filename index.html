@@ -185,7 +185,6 @@
     padding:4px 8px;
   }
 
-  /* ✅ v1.9.5 — modo seleção: header alternativo */
   header.app-header .header-normal{
     display:flex;
     align-items:center;
@@ -496,10 +495,14 @@
     box-shadow:0 1px 2px rgba(0,0,0,.3);
   }
 
+  /* ✅ v1.9.5 — faixa da mensagem inteira é selecionável */
   .chat-msg{
     display:flex;
     margin-bottom:8px;
-    padding:0 4px;
+    padding:6px 4px;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
   }
 
   .chat-msg.recebida{
@@ -519,9 +522,6 @@
     word-wrap:break-word;
     box-shadow:0 1px 2px rgba(0,0,0,.08);
     position:relative;
-    -webkit-touch-callout:none;
-    -webkit-user-select:none;
-    user-select:none;
   }
 
   .chat-msg.recebida .chat-bubble{
@@ -662,7 +662,7 @@
     font-variant-numeric:tabular-nums;
   }
 
-  /* ✅ v1.9.5 — modo seleção: bolha selecionada */
+  /* ✅ v1.9.5 — modo seleção */
   .chat-msg.selecionada .chat-bubble{
     box-shadow:0 0 0 2px var(--primary), 0 1px 2px rgba(0,0,0,.08);
   }
@@ -777,7 +777,6 @@
     display:block;
   }
 
-  /* ✅ v1.9.4 — Respostas rápidas */
   .chat-input-bar{
     flex-direction:column;
     align-items:stretch;
@@ -838,7 +837,6 @@
     bottom:calc(108px + env(safe-area-inset-bottom));
   }
 
-  /* ✅ v1.9.5 — esconde input + respostas rápidas em modo seleção */
   #telaConversa.modo-selecao .chat-input-bar{
     display:none !important;
   }
@@ -914,7 +912,6 @@
     margin-left:8px;
   }
 
-  /* ✅ v1.9.5 — toast */
   .toast{
     position:fixed;
     left:50%;
@@ -1719,9 +1716,8 @@
   const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000;
   const INTERVALO_DEBOUNCE_VALIDACAO = 5 * 60 * 1000;
 
-  /* ✅ v1.9.5 — toque longo */
-  const TEMPO_TOQUE_LONGO = 500;
-  const TOLERANCIA_MOVIMENTO = 10;
+  const TEMPO_TOQUE_LONGO = 450;
+  const TOLERANCIA_MOVIMENTO = 12;
 
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
@@ -1740,7 +1736,6 @@
     respostasRapidas: [],
     rrEditandoId: null,
 
-    /* ✅ v1.9.5 */
     modoSelecaoAtivo: false,
     idsSelecionados: new Set(),
 
@@ -1781,10 +1776,10 @@
     audioPlayerAtivo: null
   };
 
-  /* ✅ v1.9.5 — controle de toque longo */
   let timerToqueLongo = null;
   let posInicialToque = null;
   let toqueLongoDisparado = false;
+  let ignoreNextClick = false;
 
   /* =========================================================
      deviceId
@@ -2137,7 +2132,7 @@
   }
 
   /* =========================================================
-     ✅ v1.9.5 — TOAST
+     TOAST
      ========================================================= */
   function mostrarToast(msg){
     const el = document.getElementById("toastGlobal");
@@ -2149,7 +2144,7 @@
   }
 
   /* =========================================================
-     ✅ v1.9.5 — MODO SELEÇÃO
+     MODO SELEÇÃO
      ========================================================= */
   function podeSelecionarBolha(msgId){
     if(!msgId) return false;
@@ -2307,29 +2302,46 @@
   }
 
   /* =========================================================
-     ✅ v1.9.5 — detecção de toque longo
+     ✅ v1.9.5b — TOQUE LONGO na faixa .chat-msg
      ========================================================= */
-  function alvoDeBolha(el){
+
+  function encontrarMsgAlvo(el){
     if(!el) return null;
-    const bolha = el.closest ? el.closest(".chat-msg[data-msg-id]") : null;
-    return bolha;
+
+    // Sobe até achar .chat-msg[data-msg-id]
+    let atual = el;
+    while(atual && atual !== document){
+      if(atual.classList && atual.classList.contains("chat-msg")){
+        if(atual.hasAttribute("data-msg-id")) return atual;
+        return null;
+      }
+      atual = atual.parentNode;
+    }
+    return null;
   }
 
   function iniciarTimerToqueLongo(e){
     if(state.modoSelecaoAtivo) return;
+    if(state.gravando) return;
 
-    const alvo = alvoDeBolha(e.target);
+    const alvo = encontrarMsgAlvo(e.target);
     if(!alvo) return;
 
     const msgId = alvo.getAttribute("data-msg-id");
     if(!podeSelecionarBolha(msgId)) return;
 
-    // Se for em cima de botão de áudio ou imagem, permite mesmo assim
-    // (o toque longo vai ativar a seleção; toque curto continua normal)
-
     toqueLongoDisparado = false;
+    ignoreNextClick = false;
 
-    const toque = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    let toque;
+    if(e.touches && e.touches.length > 0){
+      toque = e.touches[0];
+    } else if(e.changedTouches && e.changedTouches.length > 0){
+      toque = e.changedTouches[0];
+    } else {
+      toque = e;
+    }
+
     posInicialToque = { x: toque.clientX, y: toque.clientY };
 
     if(timerToqueLongo) clearTimeout(timerToqueLongo);
@@ -2337,7 +2349,13 @@
     timerToqueLongo = setTimeout(() => {
       timerToqueLongo = null;
       toqueLongoDisparado = true;
+      ignoreNextClick = true;
+
+      // Reconfirma que ainda estamos no mesmo elemento (usuário não moveu)
       entrarModoSelecao(msgId);
+
+      // Auto-reseta a flag depois de um tempo
+      setTimeout(() => { ignoreNextClick = false; }, 500);
     }, TEMPO_TOQUE_LONGO);
   }
 
@@ -2347,12 +2365,20 @@
       timerToqueLongo = null;
     }
 
-    if(e && e.changedTouches && posInicialToque){
-      const t = e.changedTouches[0];
-      const dx = Math.abs(t.clientX - posInicialToque.x);
-      const dy = Math.abs(t.clientY - posInicialToque.y);
-      if(dx > TOLERANCIA_MOVIMENTO || dy > TOLERANCIA_MOVIMENTO){
-        toqueLongoDisparado = true;
+    if(e && posInicialToque){
+      let toque = null;
+      if(e.changedTouches && e.changedTouches.length > 0){
+        toque = e.changedTouches[0];
+      } else if(e.touches && e.touches.length > 0){
+        toque = e.touches[0];
+      }
+
+      if(toque){
+        const dx = Math.abs(toque.clientX - posInicialToque.x);
+        const dy = Math.abs(toque.clientY - posInicialToque.y);
+        if(dx > TOLERANCIA_MOVIMENTO || dy > TOLERANCIA_MOVIMENTO){
+          toqueLongoDisparado = true;
+        }
       }
     }
     posInicialToque = null;
@@ -3622,28 +3648,19 @@
   }
 
   document.getElementById("chatContainer").addEventListener("click", async (e) => {
-    // ✅ v1.9.5 — modo seleção: toque curto em bolha = toggle
-    if(state.modoSelecaoAtivo){
-      if(toqueLongoDisparado){
-        toqueLongoDisparado = false;
-        return;
-      }
+    // Se acabou de sair do toque longo, ignora este clique
+    if(ignoreNextClick){
+      ignoreNextClick = false;
+      e.stopPropagation();
+      return;
+    }
 
-      const alvo = e.target.closest(".chat-msg[data-msg-id]");
+    if(state.modoSelecaoAtivo){
+      const alvo = encontrarMsgAlvo(e.target);
       if(!alvo){
         sairModoSelecao();
         return;
       }
-
-      // Bloqueia ações de áudio/imagem em modo seleção
-      if(e.target.closest(".btn-play") || e.target.closest("img.chat-img")){
-        // Em modo seleção, toque em imagem/botão também toggla a bolha
-        const msgId = alvo.getAttribute("data-msg-id");
-        toggleSelecao(msgId);
-        e.stopPropagation();
-        return;
-      }
-
       const msgId = alvo.getAttribute("data-msg-id");
       toggleSelecao(msgId);
       e.stopPropagation();
@@ -3725,13 +3742,13 @@
   });
 
   /* =========================================================
-     ✅ v1.9.5 — listeners de toque longo no chat
+     ✅ v1.9.5b — listeners de toque longo
      ========================================================= */
   const chatContainerEl = document.getElementById("chatContainer");
 
   chatContainerEl.addEventListener("touchstart", iniciarTimerToqueLongo, { passive: true });
-  chatContainerEl.addEventListener("touchend", cancelarTimerToqueLongo, { passive: true });
   chatContainerEl.addEventListener("touchmove", cancelarTimerToqueLongo, { passive: true });
+  chatContainerEl.addEventListener("touchend", cancelarTimerToqueLongo, { passive: true });
   chatContainerEl.addEventListener("touchcancel", cancelarTimerToqueLongo, { passive: true });
 
   chatContainerEl.addEventListener("mousedown", (e) => {
@@ -3842,7 +3859,6 @@
 
       state.erroConversa = null;
 
-      // Limpa seleção de IDs que sumiram
       if(state.modoSelecaoAtivo){
         const idsValidos = new Set(state.mensagens.map(m => m.id));
         for(const id of Array.from(state.idsSelecionados)){
@@ -4483,11 +4499,9 @@
   });
 
   /* =========================================================
-     ✅ v1.9.5 — BOTÃO VOLTAR DO CELULAR
-     Voltar cancela seleção primeiro
+     BOTÃO VOLTAR DO CELULAR (popstate)
      ========================================================= */
   window.addEventListener("popstate", (event) => {
-    // Se modo seleção ativo, cancela primeiro
     if(state.modoSelecaoAtivo){
       state.modoSelecaoAtivo = false;
       state.idsSelecionados.clear();
@@ -4496,7 +4510,6 @@
       atualizarHeaderSelecao();
       renderBarraRespostasRapidas();
 
-      // Re-empurra estado para não sair da conversa
       try{
         history.pushState(
           { tela: "conversa", telefone: state.telefoneAtual, cliente: state.clienteAtual },
@@ -4610,7 +4623,7 @@
     configurarListenersTema();
     atualizarTemaUI();
 
-    console.log("[boot] Mila Whats v1.9.5 iniciando — deviceId:", state.deviceId);
+    console.log("[boot] Mila Whats v1.9.5b iniciando — deviceId:", state.deviceId);
 
     try{
       if(!history.state){
