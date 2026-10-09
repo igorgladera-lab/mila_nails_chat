@@ -185,6 +185,40 @@
     padding:4px 8px;
   }
 
+  /* ✅ v1.9.5 — modo seleção: header alternativo */
+  header.app-header .header-normal{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    gap:8px;
+  }
+  header.app-header .header-selecao{
+    display:none;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    gap:8px;
+  }
+  #telaConversa.modo-selecao header.app-header .header-normal{ display:none; }
+  #telaConversa.modo-selecao header.app-header .header-selecao{ display:flex; }
+
+  header.app-header .header-selecao .sel-contador{
+    flex:1;
+    text-align:center;
+    font-size:15px;
+    font-weight:700;
+    letter-spacing:.3px;
+  }
+
+  header.app-header .header-selecao .header-btn{
+    font-size:20px;
+  }
+  header.app-header .header-selecao .header-btn:disabled{
+    opacity:.4;
+    cursor:not-allowed;
+  }
+
   .content{
     position:fixed;
     left:0;
@@ -425,6 +459,43 @@
     flex:0 0 auto;
   }
 
+  .chat-sep-dia{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:14px 8px 10px;
+    color:var(--muted);
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.6px;
+    text-transform:uppercase;
+    user-select:none;
+  }
+  .chat-sep-dia::before,
+  .chat-sep-dia::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:rgba(0,0,0,.08);
+  }
+  html[data-theme="dark"] .chat-sep-dia::before,
+  html[data-theme="dark"] .chat-sep-dia::after{
+    background:rgba(255,255,255,.1);
+  }
+  .chat-sep-dia .chat-sep-texto{
+    background:var(--surface);
+    padding:5px 12px;
+    border-radius:12px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06);
+    color:var(--text);
+    font-weight:600;
+    letter-spacing:.3px;
+    text-transform:none;
+  }
+  html[data-theme="dark"] .chat-sep-dia .chat-sep-texto{
+    box-shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+
   .chat-msg{
     display:flex;
     margin-bottom:8px;
@@ -448,6 +519,9 @@
     word-wrap:break-word;
     box-shadow:0 1px 2px rgba(0,0,0,.08);
     position:relative;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    user-select:none;
   }
 
   .chat-msg.recebida .chat-bubble{
@@ -588,6 +662,27 @@
     font-variant-numeric:tabular-nums;
   }
 
+  /* ✅ v1.9.5 — modo seleção: bolha selecionada */
+  .chat-msg.selecionada .chat-bubble{
+    box-shadow:0 0 0 2px var(--primary), 0 1px 2px rgba(0,0,0,.08);
+  }
+  .chat-msg.selecionada .chat-bubble::after{
+    content:"✓";
+    position:absolute;
+    top:-6px;
+    right:-6px;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:var(--primary);
+    color:#fff;
+    font-size:13px;
+    font-weight:900;
+    line-height:22px;
+    text-align:center;
+    box-shadow:0 1px 3px rgba(0,0,0,.25);
+  }
+
   .chat-input-bar{
     position:fixed;
     left:0;
@@ -643,6 +738,8 @@
     max-height:100px;
     min-height:40px;
     line-height:1.4;
+    -webkit-user-select:text;
+    user-select:text;
   }
 
   .chat-input-bar textarea:focus{
@@ -680,9 +777,7 @@
     display:block;
   }
 
-  /* =========================================================
-     ✅ v1.9.4 — Respostas rápidas
-     ========================================================= */
+  /* ✅ v1.9.4 — Respostas rápidas */
   .chat-input-bar{
     flex-direction:column;
     align-items:stretch;
@@ -739,160 +834,16 @@
     box-sizing:border-box;
   }
 
-  /* Ajuste do chat-container pra acomodar a barra maior */
   #telaConversa .chat-container{
     bottom:calc(108px + env(safe-area-inset-bottom));
   }
 
-  /* =========================================================
-     ✅ v1.9.4 — Bloco de config das respostas rápidas
-     ========================================================= */
-  .rr-bloco{
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:14px;
-    margin-bottom:16px;
-    background:var(--input-bg-alt);
+  /* ✅ v1.9.5 — esconde input + respostas rápidas em modo seleção */
+  #telaConversa.modo-selecao .chat-input-bar{
+    display:none !important;
   }
-  .rr-bloco .rr-titulo{
-    font-size:13px;
-    font-weight:700;
-    color:var(--text);
-    margin-bottom:6px;
-    display:flex;
-    align-items:center;
-    gap:6px;
-  }
-  .rr-bloco .rr-sub{
-    font-size:12px;
-    color:var(--muted);
-    line-height:1.4;
-    margin-bottom:12px;
-  }
-
-  .rr-lista{
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-    margin-bottom:12px;
-  }
-
-  .rr-item{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    padding:8px 10px;
-    background:var(--surface);
-    border:1px solid var(--border);
-    border-radius:8px;
-    min-height:38px;
-  }
-  .rr-item .rr-item-texto{
-    flex:1;
-    min-width:0;
-    font-size:13px;
-    color:var(--text);
-    line-height:1.3;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
-  .rr-item .rr-item-btn{
-    flex:0 0 auto;
-    background:transparent;
-    border:none;
-    color:var(--muted);
-    font-size:16px;
-    cursor:pointer;
-    padding:4px 6px;
-    line-height:1;
-    border-radius:6px;
-    transition:background .15s, color .15s;
-  }
-  .rr-item .rr-item-btn:hover{
-    background:var(--btn-active);
-    color:var(--text);
-  }
-  .rr-item .rr-item-btn.editar{ color:var(--primary); }
-  .rr-item .rr-item-btn.excluir{ color:#c62828; }
-
-  html[data-theme="dark"] .rr-item .rr-item-btn.excluir{ color:#ef5350; }
-
-  .rr-lista .rr-vazia{
-    font-size:12px;
-    color:var(--muted);
-    font-style:italic;
-    padding:8px 4px;
-    text-align:center;
-  }
-
-  .rr-acoes{
-    display:flex;
-    flex-direction:column;
-    gap:8px;
-  }
-
-  .rr-btn-add,
-  .rr-btn-restaurar{
-    width:100%;
-    background:var(--primary);
-    color:#fff;
-    border:none;
-    border-radius:8px;
-    padding:10px;
-    font-size:13px;
-    font-weight:600;
-    font-family:inherit;
-    cursor:pointer;
-    transition:background .15s, opacity .15s;
-  }
-  .rr-btn-add:active{ background:var(--primary-dark); }
-
-  .rr-btn-restaurar{
-    background:var(--btn-bg);
-    color:var(--text);
-  }
-  .rr-btn-restaurar:active{ background:var(--btn-active); }
-
-  .rr-btn-add:disabled{
-    opacity:.5;
-    cursor:not-allowed;
-  }
-
-  /* =========================================================
-     ✅ v1.9.4 — Sub-overlay de resposta rápida
-     ========================================================= */
-  .rr-form-counter{
-    font-size:11px;
-    color:var(--muted);
-    text-align:right;
-    margin-top:4px;
-  }
-  .rr-form-counter.limite{
-    color:#c62828;
-    font-weight:700;
-  }
-
-  .rr-emojis{
-    display:grid;
-    grid-template-columns:repeat(6, 1fr);
-    gap:6px;
-    margin-top:8px;
-  }
-  .rr-emojis .rr-emoji{
-    background:var(--btn-bg);
-    border:1px solid var(--border);
-    border-radius:8px;
-    padding:10px;
-    font-size:20px;
-    cursor:pointer;
-    font-family:inherit;
-    transition:background .15s, transform .1s;
-    line-height:1;
-  }
-  .rr-emojis .rr-emoji:active{
-    background:var(--btn-active);
-    transform:scale(.94);
+  #telaConversa.modo-selecao .chat-container{
+    bottom:env(safe-area-inset-bottom);
   }
 
   .chat-input-bar.gravando{
@@ -961,6 +912,30 @@
     font-weight:700;
     cursor:pointer;
     margin-left:8px;
+  }
+
+  /* ✅ v1.9.5 — toast */
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:calc(120px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px);
+    background:rgba(0,0,0,.85);
+    color:#fff;
+    font-size:13px;
+    font-weight:600;
+    padding:10px 18px;
+    border-radius:20px;
+    z-index:400;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s, transform .2s;
+    max-width:80vw;
+    text-align:center;
+  }
+  .toast.show{
+    opacity:1;
+    transform:translateX(-50%) translateY(0);
   }
 
   .img-full{
@@ -1239,6 +1214,151 @@
     font-size:14px;
   }
 
+  .rr-bloco{
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:14px;
+    margin-bottom:16px;
+    background:var(--input-bg-alt);
+  }
+  .rr-bloco .rr-titulo{
+    font-size:13px;
+    font-weight:700;
+    color:var(--text);
+    margin-bottom:6px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .rr-bloco .rr-sub{
+    font-size:12px;
+    color:var(--muted);
+    line-height:1.4;
+    margin-bottom:12px;
+  }
+
+  .rr-lista{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    margin-bottom:12px;
+  }
+
+  .rr-item{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 10px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    min-height:38px;
+  }
+  .rr-item .rr-item-texto{
+    flex:1;
+    min-width:0;
+    font-size:13px;
+    color:var(--text);
+    line-height:1.3;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .rr-item .rr-item-btn{
+    flex:0 0 auto;
+    background:transparent;
+    border:none;
+    color:var(--muted);
+    font-size:16px;
+    cursor:pointer;
+    padding:4px 6px;
+    line-height:1;
+    border-radius:6px;
+    transition:background .15s, color .15s;
+  }
+  .rr-item .rr-item-btn:hover{
+    background:var(--btn-active);
+    color:var(--text);
+  }
+  .rr-item .rr-item-btn.editar{ color:var(--primary); }
+  .rr-item .rr-item-btn.excluir{ color:#c62828; }
+
+  html[data-theme="dark"] .rr-item .rr-item-btn.excluir{ color:#ef5350; }
+
+  .rr-lista .rr-vazia{
+    font-size:12px;
+    color:var(--muted);
+    font-style:italic;
+    padding:8px 4px;
+    text-align:center;
+  }
+
+  .rr-acoes{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+
+  .rr-btn-add,
+  .rr-btn-restaurar{
+    width:100%;
+    background:var(--primary);
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:10px;
+    font-size:13px;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    transition:background .15s, opacity .15s;
+  }
+  .rr-btn-add:active{ background:var(--primary-dark); }
+
+  .rr-btn-restaurar{
+    background:var(--btn-bg);
+    color:var(--text);
+  }
+  .rr-btn-restaurar:active{ background:var(--btn-active); }
+
+  .rr-btn-add:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+  }
+
+  .rr-form-counter{
+    font-size:11px;
+    color:var(--muted);
+    text-align:right;
+    margin-top:4px;
+  }
+  .rr-form-counter.limite{
+    color:#c62828;
+    font-weight:700;
+  }
+
+  .rr-emojis{
+    display:grid;
+    grid-template-columns:repeat(6, 1fr);
+    gap:6px;
+    margin-top:8px;
+  }
+  .rr-emojis .rr-emoji{
+    background:var(--btn-bg);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:10px;
+    font-size:20px;
+    cursor:pointer;
+    font-family:inherit;
+    transition:background .15s, transform .1s;
+    line-height:1;
+  }
+  .rr-emojis .rr-emoji:active{
+    background:var(--btn-active);
+    transform:scale(.94);
+  }
+
   .btn{
     border:none;
     border-radius:8px;
@@ -1376,11 +1496,18 @@
 
 <div id="telaConversa" style="display:none;">
   <header class="app-header">
-    <button class="header-btn header-voltar" id="btnVoltar" aria-label="Voltar">←</button>
-    <span class="header-title">
-      <span class="nome-conversa" id="nomeConversa">—</span>
-    </span>
-    <button class="header-btn" id="btnReloadConversa" aria-label="Recarregar">🔄</button>
+    <div class="header-normal">
+      <button class="header-btn header-voltar" id="btnVoltar" aria-label="Voltar">←</button>
+      <span class="header-title">
+        <span class="nome-conversa" id="nomeConversa">—</span>
+      </span>
+      <button class="header-btn" id="btnReloadConversa" aria-label="Recarregar">🔄</button>
+    </div>
+    <div class="header-selecao">
+      <button class="header-btn" id="btnCancelarSelecao" aria-label="Cancelar seleção">✕</button>
+      <span class="sel-contador" id="selecaoContador">0 selecionadas</span>
+      <button class="header-btn" id="btnCopiarSelecao" aria-label="Copiar" disabled>📋</button>
+    </div>
   </header>
 
   <div class="aviso-push" id="avisoPushConv">
@@ -1433,6 +1560,8 @@
   <img id="imgFullEl" src="" alt="">
 </div>
 
+<div class="toast" id="toastGlobal"></div>
+
 <div class="overlay" id="overlayConfig">
   <div class="sheet">
     <div class="sheet-header">
@@ -1481,7 +1610,6 @@
         <button class="push-btn secundario" id="btnRenovarPush" type="button">🔄 Renovar push</button>
       </div>
 
-      <!-- ✅ v1.9.4 — Respostas rápidas -->
       <div class="rr-bloco">
         <div class="rr-titulo">💬 Respostas rápidas</div>
         <div class="rr-sub">Mensagens prontas que aparecem acima do campo de texto no chat.</div>
@@ -1528,7 +1656,6 @@
   </div>
 </div>
 
-<!-- ✅ v1.9.4 — Sub-overlay: editar/adicionar resposta rápida -->
 <div class="overlay" id="overlayRespRapida">
   <div class="sheet">
     <div class="sheet-header">
@@ -1575,7 +1702,6 @@
   const LS_TEMA      = "mila_whats_tema";
   const LS_DEVICE_ID = "mila_whats_device_id";
 
-  /* ✅ v1.9.4 — respostas rápidas */
   const LS_RESPOSTAS_RAPIDAS = "mila_whats_respostas_rapidas";
   const RR_LIMITE_ITENS = 12;
   const RR_LIMITE_CHARS = 100;
@@ -1591,9 +1717,11 @@
   const INTERVALO_REFRESH_LISTA    = 30000;
   const INTERVALO_REFRESH_CONVERSA = 15000;
   const INTERVALO_DEBOUNCE_PUSH    = 5 * 60 * 1000;
-
-  /* ✅ Fase 2 — debounce da validação ativa (5 min) */
   const INTERVALO_DEBOUNCE_VALIDACAO = 5 * 60 * 1000;
+
+  /* ✅ v1.9.5 — toque longo */
+  const TEMPO_TOQUE_LONGO = 500;
+  const TOLERANCIA_MOVIMENTO = 10;
 
   const LIMITE_IMG   = 5  * 1024 * 1024;
   const LIMITE_AUDIO = 16 * 1024 * 1024;
@@ -1609,9 +1737,12 @@
     backendUrl: "",
     apiKey: "",
 
-    /* ✅ v1.9.4 */
     respostasRapidas: [],
     rrEditandoId: null,
+
+    /* ✅ v1.9.5 */
+    modoSelecaoAtivo: false,
+    idsSelecionados: new Set(),
 
     conversas: [],
     carregando: false,
@@ -1650,8 +1781,13 @@
     audioPlayerAtivo: null
   };
 
+  /* ✅ v1.9.5 — controle de toque longo */
+  let timerToqueLongo = null;
+  let posInicialToque = null;
+  let toqueLongoDisparado = false;
+
   /* =========================================================
-     deviceId — identifica este dispositivo de forma única
+     deviceId
      ========================================================= */
   function gerarDeviceId(){
     return "dev_" +
@@ -1709,7 +1845,7 @@
   }
 
   /* =========================================================
-     ✅ v1.9.4 — RESPOSTAS RÁPIDAS (persistência)
+     RESPOSTAS RÁPIDAS (persistência)
      ========================================================= */
   function gerarIdRR(){
     return "rr_" + Date.now().toString(36) + "_" +
@@ -2001,6 +2137,228 @@
   }
 
   /* =========================================================
+     ✅ v1.9.5 — TOAST
+     ========================================================= */
+  function mostrarToast(msg){
+    const el = document.getElementById("toastGlobal");
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => el.classList.remove("show"), 2000);
+  }
+
+  /* =========================================================
+     ✅ v1.9.5 — MODO SELEÇÃO
+     ========================================================= */
+  function podeSelecionarBolha(msgId){
+    if(!msgId) return false;
+    const msg = state.mensagens.find(m => m.id === msgId);
+    if(!msg) return false;
+    if(msg._enviando || msg._erro) return false;
+    return true;
+  }
+
+  function entrarModoSelecao(msgId){
+    if(state.modoSelecaoAtivo) return;
+
+    state.modoSelecaoAtivo = true;
+    state.idsSelecionados.clear();
+    if(msgId) state.idsSelecionados.add(msgId);
+
+    document.getElementById("telaConversa").classList.add("modo-selecao");
+
+    try{ if(navigator.vibrate) navigator.vibrate(15); }catch(e){}
+
+    atualizarHeaderSelecao();
+    aplicarSelecaoNasBolhas();
+    renderBarraRespostasRapidas();
+
+    try{
+      history.pushState(
+        { tela: "conversa", telefone: state.telefoneAtual, cliente: state.clienteAtual, sel: true },
+        "",
+        "#conversa=" + encodeURIComponent(state.telefoneAtual)
+      );
+    }catch(e){}
+  }
+
+  function sairModoSelecao(){
+    if(!state.modoSelecaoAtivo) return;
+
+    state.modoSelecaoAtivo = false;
+    state.idsSelecionados.clear();
+
+    document.getElementById("telaConversa").classList.remove("modo-selecao");
+
+    aplicarSelecaoNasBolhas();
+    renderBarraRespostasRapidas();
+
+    try{
+      if(history.state && history.state.sel){
+        history.back();
+      }
+    }catch(e){}
+  }
+
+  function toggleSelecao(msgId){
+    if(!msgId) return;
+    if(!podeSelecionarBolha(msgId)) return;
+
+    if(state.idsSelecionados.has(msgId)){
+      state.idsSelecionados.delete(msgId);
+    } else {
+      state.idsSelecionados.add(msgId);
+    }
+
+    if(state.idsSelecionados.size === 0){
+      sairModoSelecao();
+      return;
+    }
+
+    atualizarHeaderSelecao();
+    aplicarSelecaoNasBolhas();
+  }
+
+  function atualizarHeaderSelecao(){
+    const n = state.idsSelecionados.size;
+    const el = document.getElementById("selecaoContador");
+    const btn = document.getElementById("btnCopiarSelecao");
+
+    if(el){
+      el.textContent = n === 1 ? "1 selecionada" : (n + " selecionadas");
+    }
+    if(btn){
+      btn.disabled = (n === 0);
+    }
+  }
+
+  function aplicarSelecaoNasBolhas(){
+    const bolhas = document.querySelectorAll(".chat-msg[data-msg-id]");
+    bolhas.forEach(b => {
+      const id = b.getAttribute("data-msg-id");
+      if(state.modoSelecaoAtivo && state.idsSelecionados.has(id)){
+        b.classList.add("selecionada");
+      } else {
+        b.classList.remove("selecionada");
+      }
+    });
+  }
+
+  function textoDeMensagem(m){
+    const tipo = m.tipo || "text";
+    if(tipo === "image"){
+      const leg = (m.conteudo && m.conteudo !== "[Imagem]") ? m.conteudo : "";
+      return leg ? ("[Imagem] " + leg) : "[Imagem]";
+    }
+    if(tipo === "voice") return "[Mensagem de voz]";
+    if(tipo === "audio") return "[Áudio]";
+    if(tipo === "template") return formatarTextoTemplate(m.conteudo || "");
+    return m.conteudo || "";
+  }
+
+  async function copiarSelecao(){
+    const ids = Array.from(state.idsSelecionados);
+    if(ids.length === 0) return;
+
+    const mensagensSel = state.mensagens.filter(m => state.idsSelecionados.has(m.id));
+
+    const textos = mensagensSel
+      .map(textoDeMensagem)
+      .map(t => String(t || "").trim())
+      .filter(t => t.length > 0);
+
+    if(textos.length === 0){
+      mostrarToast("Nada para copiar");
+      return;
+    }
+
+    const textoFinal = textos.join("\n\n");
+
+    let copiou = false;
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(textoFinal);
+        copiou = true;
+      }
+    }catch(e){}
+
+    if(!copiou){
+      try{
+        const ta = document.createElement("textarea");
+        ta.value = textoFinal;
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, textoFinal.length);
+        copiou = document.execCommand("copy");
+        document.body.removeChild(ta);
+      }catch(e){ copiou = false; }
+    }
+
+    if(copiou){
+      mostrarToast(textos.length === 1 ? "Copiado!" : (textos.length + " mensagens copiadas!"));
+      sairModoSelecao();
+    } else {
+      mostrarToast("Não foi possível copiar");
+    }
+  }
+
+  /* =========================================================
+     ✅ v1.9.5 — detecção de toque longo
+     ========================================================= */
+  function alvoDeBolha(el){
+    if(!el) return null;
+    const bolha = el.closest ? el.closest(".chat-msg[data-msg-id]") : null;
+    return bolha;
+  }
+
+  function iniciarTimerToqueLongo(e){
+    if(state.modoSelecaoAtivo) return;
+
+    const alvo = alvoDeBolha(e.target);
+    if(!alvo) return;
+
+    const msgId = alvo.getAttribute("data-msg-id");
+    if(!podeSelecionarBolha(msgId)) return;
+
+    // Se for em cima de botão de áudio ou imagem, permite mesmo assim
+    // (o toque longo vai ativar a seleção; toque curto continua normal)
+
+    toqueLongoDisparado = false;
+
+    const toque = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    posInicialToque = { x: toque.clientX, y: toque.clientY };
+
+    if(timerToqueLongo) clearTimeout(timerToqueLongo);
+
+    timerToqueLongo = setTimeout(() => {
+      timerToqueLongo = null;
+      toqueLongoDisparado = true;
+      entrarModoSelecao(msgId);
+    }, TEMPO_TOQUE_LONGO);
+  }
+
+  function cancelarTimerToqueLongo(e){
+    if(timerToqueLongo){
+      clearTimeout(timerToqueLongo);
+      timerToqueLongo = null;
+    }
+
+    if(e && e.changedTouches && posInicialToque){
+      const t = e.changedTouches[0];
+      const dx = Math.abs(t.clientX - posInicialToque.x);
+      const dy = Math.abs(t.clientY - posInicialToque.y);
+      if(dx > TOLERANCIA_MOVIMENTO || dy > TOLERANCIA_MOVIMENTO){
+        toqueLongoDisparado = true;
+      }
+    }
+    posInicialToque = null;
+  }
+
+  /* =========================================================
      BADGE GLOBAL
      ========================================================= */
   async function atualizarBadge(){
@@ -2060,7 +2418,7 @@
   }
 
   /* =========================================================
-     PUSH NOTIFICATIONS
+     PUSH
      ========================================================= */
   function urlBase64ToUint8Array(base64String){
     const padding = "=".repeat((4 - base64String.length % 4) % 4);
@@ -2147,7 +2505,6 @@
 
     if(!state.deviceId){
       state.deviceId = obterOuCriarDeviceId();
-      console.log("[device] deviceId (recriado):", state.deviceId);
     }
 
     try{
@@ -2235,9 +2592,6 @@
     }
   }
 
-  /* =========================================================
-     ✅ Fase 2 — validação ativa de push
-     ========================================================= */
   async function validarPushAtivo(){
     if(!state.swRegistration) return;
     if(!temConfig()) return;
@@ -2344,7 +2698,6 @@
         atualizarPushUI();
         alert("✅ Push já estava ativo. Reenviei a subscription para o backend.\n\nEndpoint: " +
               subExistente.endpoint.slice(0, 60) + "...");
-        console.log("[push] subscription reenviada:", subExistente.endpoint.slice(0, 60) + "...");
         return;
       }
     }catch(e){}
@@ -2355,7 +2708,6 @@
       try{
         if(tentativa > 1){
           const delay = tentativa * 3000;
-          console.log("[push] aguardando", delay, "ms antes da tentativa", tentativa);
           await new Promise(r => setTimeout(r, delay));
         }
 
@@ -2373,7 +2725,6 @@
 
         alert("✅ Push renovado com sucesso!\n\nEndpoint: " +
               novaSub.endpoint.slice(0, 60) + "...");
-        console.log("[push] renovação manual concluída:", novaSub.endpoint.slice(0, 60) + "...");
         return;
 
       }catch(err){
@@ -2537,7 +2888,7 @@
   });
 
   /* =========================================================
-     BACKUP E IMPORTAÇÃO
+     BACKUP
      ========================================================= */
   function exportarBackup(){
     try{
@@ -2703,6 +3054,8 @@
   function mostrarLista(opts){
     opts = opts || {};
 
+    if(state.modoSelecaoAtivo) sairModoSelecao();
+
     if(opts.viaBotaoUI){
       try{
         history.back();
@@ -2731,6 +3084,8 @@
   function mostrarConversa(telefone, nome, opts){
     opts = opts || {};
     const empilhar = opts.empilhar !== false;
+
+    if(state.modoSelecaoAtivo) sairModoSelecao();
 
     document.getElementById("telaLista").style.display = "none";
     document.getElementById("telaConversa").style.display = "block";
@@ -2988,6 +3343,8 @@
 
     hidratarMidias();
     renderBarraRespostasRapidas();
+    aplicarSelecaoNasBolhas();
+    atualizarHeaderSelecao();
   }
 
   function renderBubble(m){
@@ -3105,7 +3462,7 @@
   }
 
   /* =========================================================
-     ✅ v1.9.4 — RENDER: barra + lista de respostas rápidas
+     RESPOSTAS RÁPIDAS — render
      ========================================================= */
   function renderBarraRespostasRapidas(){
     const barra = document.getElementById("respostasRapidas");
@@ -3113,7 +3470,7 @@
 
     const itens = state.respostasRapidas || [];
 
-    if(itens.length === 0 || !state.janelaAberta || state.gravando){
+    if(itens.length === 0 || !state.janelaAberta || state.gravando || state.modoSelecaoAtivo){
       barra.classList.add("escondido");
       barra.innerHTML = "";
       return;
@@ -3155,9 +3512,6 @@
     lista.innerHTML = html;
   }
 
-  /* =========================================================
-     ✅ v1.9.4 — Form: abrir/salvar resposta rápida
-     ========================================================= */
   function abrirFormRespostaRapida(idExistente){
     const overlay = document.getElementById("overlayRespRapida");
     const titulo = document.getElementById("rrFormTitulo");
@@ -3268,6 +3622,40 @@
   }
 
   document.getElementById("chatContainer").addEventListener("click", async (e) => {
+    // ✅ v1.9.5 — modo seleção: toque curto em bolha = toggle
+    if(state.modoSelecaoAtivo){
+      if(toqueLongoDisparado){
+        toqueLongoDisparado = false;
+        return;
+      }
+
+      const alvo = e.target.closest(".chat-msg[data-msg-id]");
+      if(!alvo){
+        sairModoSelecao();
+        return;
+      }
+
+      // Bloqueia ações de áudio/imagem em modo seleção
+      if(e.target.closest(".btn-play") || e.target.closest("img.chat-img")){
+        // Em modo seleção, toque em imagem/botão também toggla a bolha
+        const msgId = alvo.getAttribute("data-msg-id");
+        toggleSelecao(msgId);
+        e.stopPropagation();
+        return;
+      }
+
+      const msgId = alvo.getAttribute("data-msg-id");
+      toggleSelecao(msgId);
+      e.stopPropagation();
+      return;
+    }
+
+    if(toqueLongoDisparado){
+      toqueLongoDisparado = false;
+      e.stopPropagation();
+      return;
+    }
+
     const btnPlay = e.target.closest(".btn-play");
     if(btnPlay){
       const wrap = btnPlay.closest(".audio-player");
@@ -3334,6 +3722,34 @@
 
     const btnRecarregar = e.target.closest("#btnRecarregarConversaErro");
     if(btnRecarregar) carregarConversa();
+  });
+
+  /* =========================================================
+     ✅ v1.9.5 — listeners de toque longo no chat
+     ========================================================= */
+  const chatContainerEl = document.getElementById("chatContainer");
+
+  chatContainerEl.addEventListener("touchstart", iniciarTimerToqueLongo, { passive: true });
+  chatContainerEl.addEventListener("touchend", cancelarTimerToqueLongo, { passive: true });
+  chatContainerEl.addEventListener("touchmove", cancelarTimerToqueLongo, { passive: true });
+  chatContainerEl.addEventListener("touchcancel", cancelarTimerToqueLongo, { passive: true });
+
+  chatContainerEl.addEventListener("mousedown", (e) => {
+    if(e.button !== 0) return;
+    iniciarTimerToqueLongo(e);
+  });
+  chatContainerEl.addEventListener("mouseup", cancelarTimerToqueLongo);
+  chatContainerEl.addEventListener("mouseleave", cancelarTimerToqueLongo);
+
+  /* =========================================================
+     ✅ v1.9.5 — botões do header de seleção
+     ========================================================= */
+  document.getElementById("btnCancelarSelecao").addEventListener("click", () => {
+    sairModoSelecao();
+  });
+
+  document.getElementById("btnCopiarSelecao").addEventListener("click", () => {
+    copiarSelecao();
   });
 
   /* =========================================================
@@ -3425,6 +3841,15 @@
       state.janelaFechaEm = info.fechaEm;
 
       state.erroConversa = null;
+
+      // Limpa seleção de IDs que sumiram
+      if(state.modoSelecaoAtivo){
+        const idsValidos = new Set(state.mensagens.map(m => m.id));
+        for(const id of Array.from(state.idsSelecionados)){
+          if(!idsValidos.has(id)) state.idsSelecionados.delete(id);
+        }
+        if(state.idsSelecionados.size === 0) sairModoSelecao();
+      }
     }catch(err){
       state.erroConversa = err.message || "Erro desconhecido";
     }finally{
@@ -3492,7 +3917,7 @@
   }
 
   /* =========================================================
-     API: UPLOAD DE MÍDIA
+     API: UPLOAD
      ========================================================= */
   async function uploadMidia(fileOrBlob, filename, tipoEsperado, duracaoSeg){
     const form = new FormData();
@@ -3665,6 +4090,7 @@
 
       document.getElementById("chatInputBar").classList.add("gravando");
       atualizarTempoGravacao();
+      renderBarraRespostasRapidas();
 
       state.timerGravacao = setInterval(atualizarTempoGravacao, 200);
 
@@ -3884,10 +4310,8 @@
   });
 
   /* =========================================================
-     ✅ v1.9.4 — EVENTOS: respostas rápidas
+     EVENTOS: RESPOSTAS RÁPIDAS
      ========================================================= */
-
-  // Clique em um botão da barra → preenche o input
   document.getElementById("respostasRapidas").addEventListener("click", (e) => {
     const btn = e.target.closest(".rr-btn");
     if(!btn) return;
@@ -3910,7 +4334,6 @@
     try{ input.focus(); }catch(err){}
   });
 
-  // Clique na lista de config (editar ou excluir)
   document.getElementById("rrListaConfig").addEventListener("click", (e) => {
     const btn = e.target.closest(".rr-item-btn");
     if(!btn) return;
@@ -3938,7 +4361,6 @@
     }
   });
 
-  // Botão "+ Adicionar"
   document.getElementById("rrBtnAdd").addEventListener("click", () => {
     if(state.respostasRapidas.length >= RR_LIMITE_ITENS){
       alert("Limite de " + RR_LIMITE_ITENS + " respostas atingido.");
@@ -3947,7 +4369,6 @@
     abrirFormRespostaRapida(null);
   });
 
-  // Botão "🔄 Restaurar padrão"
   document.getElementById("rrBtnRestaurar").addEventListener("click", () => {
     if(confirm("Restaurar as respostas padrão? Suas personalizações serão perdidas.")){
       restaurarRespostasPadrao();
@@ -3956,7 +4377,6 @@
     }
   });
 
-  // Form: contador de caracteres
   document.getElementById("rrFormTexto").addEventListener("input", (e) => {
     const len = String(e.target.value || "").length;
     const counter = document.getElementById("rrFormCounter");
@@ -3965,7 +4385,6 @@
     counter.classList.toggle("limite", len >= RR_LIMITE_CHARS);
   });
 
-  // Form: clique em emoji insere no final
   document.getElementById("rrEmojis").addEventListener("click", (e) => {
     const btn = e.target.closest(".rr-emoji");
     if(!btn) return;
@@ -3990,10 +4409,8 @@
     try{ input.focus(); }catch(err){}
   });
 
-  // Form: botão Salvar
   document.getElementById("rrBtnSalvarForm").addEventListener("click", salvarFormRespostaRapida);
 
-  // Form: Enter também salva
   document.getElementById("rrFormTexto").addEventListener("keydown", (e) => {
     if(e.key === "Enter"){
       e.preventDefault();
@@ -4002,7 +4419,7 @@
   });
 
   /* =========================================================
-     EVENTOS: BANNER DE AVISO DE PUSH
+     EVENTOS: BANNER DE PUSH
      ========================================================= */
   document.getElementById("btnFecharAvisoPush").addEventListener("click", () => {
     esconderAvisoPush();
@@ -4036,6 +4453,10 @@
      EVENTOS: CONVERSA
      ========================================================= */
   document.getElementById("btnVoltar").addEventListener("click", () => {
+    if(state.modoSelecaoAtivo){
+      sairModoSelecao();
+      return;
+    }
     mostrarLista({ viaBotaoUI: true });
   });
 
@@ -4062,9 +4483,30 @@
   });
 
   /* =========================================================
-     BOTÃO VOLTAR DO CELULAR (popstate)
+     ✅ v1.9.5 — BOTÃO VOLTAR DO CELULAR
+     Voltar cancela seleção primeiro
      ========================================================= */
   window.addEventListener("popstate", (event) => {
+    // Se modo seleção ativo, cancela primeiro
+    if(state.modoSelecaoAtivo){
+      state.modoSelecaoAtivo = false;
+      state.idsSelecionados.clear();
+      document.getElementById("telaConversa").classList.remove("modo-selecao");
+      aplicarSelecaoNasBolhas();
+      atualizarHeaderSelecao();
+      renderBarraRespostasRapidas();
+
+      // Re-empurra estado para não sair da conversa
+      try{
+        history.pushState(
+          { tela: "conversa", telefone: state.telefoneAtual, cliente: state.clienteAtual },
+          "",
+          "#conversa=" + encodeURIComponent(state.telefoneAtual)
+        );
+      }catch(e){}
+      return;
+    }
+
     const st = event.state || {};
 
     if(st.tela === "conversa" && st.telefone){
@@ -4114,6 +4556,7 @@
     navigator.serviceWorker.addEventListener("message", (event) => {
       const data = event.data || {};
       if(data.type === "abrirConversa" && data.telefone){
+        if(state.modoSelecaoAtivo) sairModoSelecao();
         const jaEstouNela = (state.telefoneAtual === data.telefone);
         mostrarConversa(
           data.telefone,
@@ -4167,7 +4610,7 @@
     configurarListenersTema();
     atualizarTemaUI();
 
-    console.log("[boot] Mila Whats v1.9.4 iniciando — deviceId:", state.deviceId);
+    console.log("[boot] Mila Whats v1.9.5 iniciando — deviceId:", state.deviceId);
 
     try{
       if(!history.state){
