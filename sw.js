@@ -4,7 +4,7 @@
 // + deep-link alinhado com #conversa= (pushState do index)
 // =========================================================
 
-const VERSAO_SW = "1.9.0";
+const VERSAO_SW = "1.9.1";
 const CACHE_MIDIA = "mila-media-" + VERSAO_SW;
 const CACHE_PWA = "mila-pwa-" + VERSAO_SW;
 
@@ -273,18 +273,26 @@ self.addEventListener("push", (event) => {
             return;
           }
 
-          const url = backendUrl.replace(/\/+$/, "") + "/push/ack";
-          const resp = await fetch(url, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": apiKey
-            },
-            body: JSON.stringify({
-              endpoint: endpoint,
-              ts: data.ts || Date.now()
-            })
-          });
+          const ackToken = data.ackToken || "";
+
+			if(!ackToken){
+			  console.warn("[sw] heartbeat sem ackToken no payload");
+			  return;
+			}
+
+			const url = backendUrl.replace(/\/+$/, "") + "/push/ack";
+			const resp = await fetch(url, {
+			  method: "POST",
+			  headers: {
+				"Content-Type": "application/json",
+				"x-api-key": apiKey
+			  },
+			  body: JSON.stringify({
+				endpoint: endpoint,
+				ackToken: ackToken,
+				ts: data.ts || Date.now()
+			  })
+			});
 
           if(resp.ok){
             console.log("[sw] heartbeat ack enviado para", endpoint.slice(0, 60) + "...");
